@@ -13,7 +13,8 @@
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
-            "preLaunchTask": "build"
+            "preLaunchTask": "build",
+            // "postDebugTask": "close terminal"
         }
     ]
 }

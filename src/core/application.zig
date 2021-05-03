@@ -1,6 +1,12 @@
+// Third-Party
 const c = @import("../c_global.zig").c_imp;
-const gfx = @import("../renderer/renderer.zig");
 const std = @import("std");
+// dross-rs
+const gfx = @import("../renderer/renderer.zig");
+
+/// User defined update/tick function
+/// Returns: void
+pub extern fn update(delta: f64) void;
 
 /// Error Set for Application-related Errors
 pub const ApplicationError = error{
@@ -29,6 +35,7 @@ pub const Application = struct {
             // Process input
 
             // Update
+            update(1.0);
 
             // Render
             self.renderer.?.render();
@@ -63,6 +70,11 @@ pub const Application = struct {
         // Call renderer's resize method
         self.renderer.?.resizeViewport(x, y, width, height);
     }
+
+    /// TODO(devon): write desc title
+    pub fn setWindowTitle(self: *Application, title: [*c]const u8) void {
+        c.glfwSetWindowTitle(self.window, title);
+    }
 };
 
 /// Allocated and builds the constituent components of an Application.
@@ -78,9 +90,10 @@ pub fn build(allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, h
     if (c.glfwInit() == c.GL_FALSE) return ApplicationError.WindowInit;
 
     // GLFW Configuration
-    c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MAJOR, 3);
-    c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MINOR, 3);
+    c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MAJOR, 4);
+    c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MINOR, 5);
     c.glfwWindowHint(c.GLFW_OPENGL_PROFILE, c.GLFW_OPENGL_CORE_PROFILE);
+    c.glfwWindowHint(c.GLFW_OPENGL_FORWARD_COMPAT, c.GL_TRUE);
 
     // Window Creation
     app.window = c.glfwCreateWindow(width, height, title, null, null) orelse return ApplicationError.WindowCreation;
@@ -97,7 +110,7 @@ pub fn build(allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, h
     _ = c.glfwSetFramebufferSizeCallback(app.window, gfx.Renderer.resizeInternal);
 
     // Resize the application's viewport to match that of the window
-    app.resize(0, 0, width, height);
+    // app.resize(0, 0, width, height);
 
     return app;
 }

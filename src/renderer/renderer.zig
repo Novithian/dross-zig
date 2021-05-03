@@ -1,6 +1,9 @@
+// Third Parties
 const c = @import("../c_global.zig").c_imp;
-const gl = @import("backend/backend_opengl.zig");
 const std = @import("std");
+// dross-zig
+const gl = @import("backend/backend_opengl.zig");
+const Color = @import("../core/core.zig").Color;
 
 /// An enum to keep track of which graphics api is
 /// being used, so the renderer can be api agnostic.
@@ -21,9 +24,7 @@ pub var api: BackendApi = BackendApi.OpenGl;
 /// Meant to be MOSTLY backend agnostic.
 pub const Renderer = struct {
     gl_backend: ?*gl.OpenGlBackend = undefined,
-    clear_r: f32 = 0.2,
-    clear_g: f32 = 0.3,
-    clear_b: f32 = 0.3,
+    clear_color: Color,
 
     /// Resizes the viewport to the given size and position 
     /// Returns: void
@@ -48,7 +49,7 @@ pub const Renderer = struct {
     pub fn render(self: *Renderer) void {
         switch (api) {
             BackendApi.OpenGl => {
-                self.gl_backend.?.render(self.clear_r, self.clear_g, self.clear_b);
+                self.gl_backend.?.render(self.clear_color);
             },
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},
@@ -62,8 +63,7 @@ pub const Renderer = struct {
     pub fn buildBackend(self: *Renderer, allocator: *std.mem.Allocator) anyerror!void {
         switch (api) {
             BackendApi.OpenGl => {
-                self.gl_backend = try allocator.create(gl.OpenGlBackend);
-                try gl.build(self.gl_backend.?);
+                self.gl_backend = try gl.build(allocator);
             },
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},
@@ -77,6 +77,7 @@ pub const Renderer = struct {
     pub fn free(self: *Renderer, allocator: *std.mem.Allocator) void {
         switch (api) {
             BackendApi.OpenGl => {
+                self.gl_backend.?.free(allocator);
                 allocator.destroy(self.gl_backend.?);
             },
             BackendApi.Dx12 => {},
@@ -110,9 +111,7 @@ pub const Renderer = struct {
 pub fn build(allocator: *std.mem.Allocator) anyerror!*Renderer {
     var renderer: *Renderer = try allocator.create(Renderer);
 
-    renderer.clear_r = 0.2;
-    renderer.clear_g = 0.2;
-    renderer.clear_b = 0.2;
+    renderer.clear_color = Color.rgb(0.2, 0.2, 0.2);
 
     try renderer.buildBackend(allocator);
 

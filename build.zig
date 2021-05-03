@@ -23,7 +23,6 @@ pub fn build(b: *std.build.Builder) void {
     exe.addCSourceFile("libs/glad/src/glad.c", &[_][]const u8{"--std=c99"});
 
     exe.linkSystemLibrary("glfw3");
-    // exe.linkSystemLibrary("glad");
     exe.linkSystemLibrary("opengl32");
 
     exe.linkLibC();
