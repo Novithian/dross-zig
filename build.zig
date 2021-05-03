@@ -5,7 +5,7 @@ pub fn build(b: *std.build.Builder) void {
     // what target to build for. Here we do not override the defaults, which
     // means any target is allowed, and the default is native. Other options
     // for restricting supported target set are available.
-    const target = b.standardTargetOptions(.{ } );
+    const target = b.standardTargetOptions(.{});
 
     // Standard release options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
@@ -15,11 +15,17 @@ pub fn build(b: *std.build.Builder) void {
     exe.setTarget(target);
     exe.setBuildMode(mode);
 
-    // const glfw_path = "D:\\Programming\\Zig\\dross-zig\\libs\\glfw\\";
     exe.addIncludeDir("libs/glfw/include");
     exe.addLibPath("libs/glfw/x64");
     b.installBinFile("libs/glfw/x64/glfw3.dll", "glfw3.dll");
+
+    exe.addIncludeDir("libs/glad");
+    exe.addCSourceFile("libs/glad/src/glad.c", &[_][]const u8{"--std=c99"});
+
     exe.linkSystemLibrary("glfw3");
+    // exe.linkSystemLibrary("glad");
+    exe.linkSystemLibrary("opengl32");
+
     exe.linkLibC();
 
     exe.install();
