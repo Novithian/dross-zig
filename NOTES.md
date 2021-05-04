@@ -26,6 +26,8 @@
     - **Offset**: No padding between each of the 3 sets of values. They are **packed** in the array.
     - **Position**: The first value in the data is at the beginning of the buffer.
 - **Vertex Array**: Known in OpenGL as **Vertex Array Objects(VAOs)**. Once bound, any subsequent vertex attirbute calls will be stored inside the VAO.
+- **Index Buffer**: Known in OpenGL as **Element Buffer Objects(EBOs)**. Stores indices that will be used to decide what vertices to draw. Eliminates multiple vertices at the same position. So instead of using 6 vertices to draw a rectangle(2 triangles), using indices we only need 4 vertices. 
+- **Indexed Drawing**: The process of using index buffers to eliminate the need of overlapping vertices.
 
 
 ### OpenGL ###

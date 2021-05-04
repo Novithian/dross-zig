@@ -33,6 +33,7 @@ pub const Application = struct {
     pub fn run(self: *Application) void {
         while (c.glfwWindowShouldClose(self.window) == 0) {
             // Process input
+            self.processInput();
 
             // Update
             update(1.0);
@@ -62,6 +63,12 @@ pub const Application = struct {
         self.allocator.?.destroy(self.renderer.?);
     }
 
+    /// Process the application input
+    /// Returns: void
+    pub fn processInput(self: *Application) void {
+        if(c.glfwGetKey(self.window, c.GLFW_KEY_ESCAPE) == c.GLFW_PRESS) c.glfwSetWindowShouldClose(self.window, c.GL_TRUE);
+    }
+
     /// Resize the application
     /// Returns: void
     /// x: c_int - x position of the application
@@ -71,7 +78,9 @@ pub const Application = struct {
         self.renderer.?.resizeViewport(x, y, width, height);
     }
 
-    /// TODO(devon): write desc title
+    /// Sets the application's window title
+    /// Returns: void
+    /// title: [*c]const u8
     pub fn setWindowTitle(self: *Application, title: [*c]const u8) void {
         c.glfwSetWindowTitle(self.window, title);
     }
@@ -83,6 +92,7 @@ pub const Application = struct {
 /// title: [*c]const u8 - The title of the application's window
 /// width: c_int - The initial width of the application's window
 /// height: c_int - The initial height of the application's window
+/// Comments: The caller will be the owner of the returned pointer.
 pub fn build(allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, height: c_int) anyerror!*Application {
     var app: *Application = try allocator.create(Application);
 

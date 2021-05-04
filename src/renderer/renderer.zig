@@ -59,8 +59,9 @@ pub const Renderer = struct {
     /// Builds the graphics API
     /// Returns: anyerror!void
     /// allocator: *std.mem.Allocator - The main application allocator 
-    /// Comment: INTERNAL use only.
-    pub fn buildBackend(self: *Renderer, allocator: *std.mem.Allocator) anyerror!void {
+    /// Comment: INTERNAL use only. The Renderer will be the owner of the allocated memory.
+    pub fn build(self: *Renderer, allocator: *std.mem.Allocator) anyerror!void {
+        self.clear_color = Color.rgb(0.2, 0.2, 0.2);
         switch (api) {
             BackendApi.OpenGl => {
                 self.gl_backend = try gl.build(allocator);
@@ -107,13 +108,11 @@ pub const Renderer = struct {
 /// Allocates and builds the renderer
 /// Returns: anyerror!*Renderer
 /// allocator: *std.mem.Allocator - The main application allocator
-/// Comment: INTERNAL use only.
+/// Comment: INTERNAL use only. The caller will be the owner of the returned pointer.
 pub fn build(allocator: *std.mem.Allocator) anyerror!*Renderer {
     var renderer: *Renderer = try allocator.create(Renderer);
 
-    renderer.clear_color = Color.rgb(0.2, 0.2, 0.2);
-
-    try renderer.buildBackend(allocator);
+    try renderer.build(allocator);
 
     return renderer;
 }
