@@ -109,7 +109,7 @@ pub const Renderer = struct {
 /// Returns: anyerror!*Renderer
 /// allocator: *std.mem.Allocator - The main application allocator
 /// Comment: INTERNAL use only. The caller will be the owner of the returned pointer.
-pub fn build(allocator: *std.mem.Allocator) anyerror!*Renderer {
+pub fn buildRenderer(allocator: *std.mem.Allocator) anyerror!*Renderer {
     var renderer: *Renderer = try allocator.create(Renderer);
 
     try renderer.build(allocator);

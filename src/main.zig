@@ -10,7 +10,7 @@ const dross_app = @import("core/application.zig");
 //           if(leaked) @panic("mem leak");
 //      }
 //  - Create application
-//      var app: *dross_app.Application = try dross_app.build(&gpa.allocator, "title", width, height);
+//      var app: *dross_app.Application = try dross_app.buildApplication(&gpa.allocator, "title", width, height);
 //  - defer the allocator's free of the app
 //      defer gpa.allocator.destroy(app)
 //  - defer the app's free
@@ -38,7 +38,7 @@ pub fn main() anyerror!u8 {
     }
 
     // Create the application
-    app = try dross_app.build(
+    app = try dross_app.buildApplication(
         &gpa.allocator,
         APP_TITLE,
         APP_WIDTH,

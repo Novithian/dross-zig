@@ -1,11 +1,10 @@
 ## **TODO** ##
 --------------
-- Move most of application build code to build method in app
-
+- 
 ## **LOG** ##
 -------------
 - **[05-04-2021]**
-    - 
+    - Move most of application build code to build method in app
 - **[05-03-2021]**
     - Render a triangle
     - ShaderProgram

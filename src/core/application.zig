@@ -47,6 +47,41 @@ pub const Application = struct {
         }
     }
 
+    /// Allocates the necessary components to run the application
+    /// Returns: anyerror!void
+    /// allocator: *std.mem.Allocator - An allocator possed from the Application's entry point.
+    /// title: [*c]const u8 - The title of the application's window
+    /// width: c_int - The initial width of the application's window
+    /// height: c_int - The initial height of the application's window
+    /// Comments: The application will own any memory allocated.
+    pub fn build(self: *Application, allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, height: c_int) anyerror!void {
+        // Initialze GLFW, returns GL_FALSE if an error occured.
+        if (c.glfwInit() == c.GL_FALSE) return ApplicationError.WindowInit;
+
+        // GLFW Configuration
+        c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MAJOR, 4);
+        c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MINOR, 5);
+        c.glfwWindowHint(c.GLFW_OPENGL_PROFILE, c.GLFW_OPENGL_CORE_PROFILE);
+        c.glfwWindowHint(c.GLFW_OPENGL_FORWARD_COMPAT, c.GL_TRUE);
+
+        // Window Creation
+        self.window = c.glfwCreateWindow(width, height, title, null, null) orelse return ApplicationError.WindowCreation;
+
+        // Make our window the current context
+        c.glfwMakeContextCurrent(self.window);
+
+        // Build the Renderer
+        self.renderer = try gfx.buildRenderer(allocator);
+
+        // Remember to set the app's allocator to the passed allocator
+        self.allocator = allocator;
+
+        _ = c.glfwSetFramebufferSizeCallback(self.window, gfx.Renderer.resizeInternal);
+
+        // Resize the application's viewport to match that of the window
+        // app.resize(0, 0, width, height);
+    }
+
     /// Gracefully terminates the Application by cleaning up
     /// manually allocated memory as well as some other backend
     /// cleanup.
@@ -93,34 +128,10 @@ pub const Application = struct {
 /// width: c_int - The initial width of the application's window
 /// height: c_int - The initial height of the application's window
 /// Comments: The caller will be the owner of the returned pointer.
-pub fn build(allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, height: c_int) anyerror!*Application {
+pub fn buildApplication(allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, height: c_int) anyerror!*Application {
     var app: *Application = try allocator.create(Application);
 
-    // Initialze GLFW, returns GL_FALSE if an error occured.
-    if (c.glfwInit() == c.GL_FALSE) return ApplicationError.WindowInit;
-
-    // GLFW Configuration
-    c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MAJOR, 4);
-    c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MINOR, 5);
-    c.glfwWindowHint(c.GLFW_OPENGL_PROFILE, c.GLFW_OPENGL_CORE_PROFILE);
-    c.glfwWindowHint(c.GLFW_OPENGL_FORWARD_COMPAT, c.GL_TRUE);
-
-    // Window Creation
-    app.window = c.glfwCreateWindow(width, height, title, null, null) orelse return ApplicationError.WindowCreation;
-
-    // Make our window the current context
-    c.glfwMakeContextCurrent(app.window);
-
-    // Build the Renderer
-    app.renderer = try gfx.build(allocator);
-
-    // Remember to set the app's allocator to the passed allocator
-    app.allocator = allocator;
-
-    _ = c.glfwSetFramebufferSizeCallback(app.window, gfx.Renderer.resizeInternal);
-
-    // Resize the application's viewport to match that of the window
-    // app.resize(0, 0, width, height);
+    try app.build(allocator, title, width, height);   
 
     return app;
 }
