@@ -3,11 +3,12 @@ const std = @import("std");
 const Color = @import("../../core/core.zig").Color;
 
 // Testing vertices and indices
-const square_vertices: [12]f32 = [12]f32{
-    0.5, 0.5, 0.0, // Top Right
-    0.5, -0.5, 0.0, // Bottom Right
-    -0.5, -0.5, 0.0, // Bottom Left
-    -0.5, 0.5, 0.0, // Top Left
+const square_vertices: [24]f32 = [24]f32{
+    // Positions  | Colors
+    0.5, 0.5, 0.0, 1.0, 0.0, 0.0, // Top Right
+    0.5, -0.5, 0.0, 0.5, 1.0, 0.0, // Bottom Right
+    -0.5, -0.5, 0.0, 0.0, 1.0, 0.0, // Bottom Left
+    -0.5, 0.5, 0.0, 0.0, 0.0, 1.0, // Top Left
 };
 
 const square_indices: [6]c_uint = [6]c_uint{
@@ -24,21 +25,9 @@ const square_indices: [6]c_uint = [6]c_uint{
 // -----------------------------------------
 //      - GLSL Default Shaders -
 // -----------------------------------------
-const default_vertex_shader: [:0]const u8 =
-    \\#version 450 core
-    \\layout (location = 0) in vec3 in_pos;
-    \\void main(){
-    \\  gl_Position = vec4(in_pos.x, in_pos.y, in_pos.z, 1.0);
-    \\}
-;
+const default_shader_vs: [:0]const u8 = "default_shader.vs";
+const default_shader_fs: [:0]const u8 = "default_shader.fs";
 
-const default_fragment_shader: [:0]const u8 =
-    \\#version 450 core
-    \\out vec4 out_color;
-    \\void main(){
-    \\  out_color = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-    \\}
-;
 // -----------------------------------------
 //      - OpenGL Errors -
 // -----------------------------------------
@@ -72,12 +61,12 @@ pub const OpenGlBackend = struct {
     pub fn build(self: *OpenGlBackend, allocator: *std.mem.Allocator) anyerror!void {
         // Allocate and compile the vertex shader
         var vertex_shader: *GlShader = try buildGlShader(allocator, GlShaderType.Vertex);
-        vertex_shader.source(default_vertex_shader);
+        try vertex_shader.source(default_shader_vs);
         try vertex_shader.compile();
 
         // Allocate and compile the fragment shader
         var fragment_shader: *GlShader = try buildGlShader(allocator, GlShaderType.Fragment);
-        fragment_shader.source(default_fragment_shader);
+        try fragment_shader.source(default_shader_fs);
         try fragment_shader.compile();
 
         // Allocate memory for the shader program
@@ -117,28 +106,46 @@ pub const OpenGlBackend = struct {
         var indicies_slice = square_indices[0..];
         self.index_buffer.?.data(indicies_slice, GlBufferUsage.StaticDraw);
 
-        const size_of_vatb = 3;
+        const size_of_vatb = 6;
         const stride = @intCast(c_longlong, @sizeOf(f32) * size_of_vatb);
-        const offset: u32 = 0;
+        const offset_position: u32 = 0;
+        const offset_color: u32 = 3 * @sizeOf(f32);
         const index_zero: c_int = 0;
+        const index_one: c_int = 1;
+        const size: c_uint = 3;
 
         // Tells OpenGL how to interpret the vertex data(per vertex attribute)
         // Uses the data to the currently bound VBO
 
         // glVertexAttribPointer(GLuint index, Glint size, GLenum type,
         //      GLboolean normalized, GLsizei stride, const GLvoid *pointer)
+
+        // Position Attribute
         c.glVertexAttribPointer(
             index_zero, // Which vertex attribute we want to configure
-            @intCast(c_uint, 3), // Size of vertex attribute (vec3 in this case)
+            size, // Size of vertex attribute (vec3 in this case)
             c.GL_FLOAT, // Type of data
             c.GL_FALSE, // Should the data be normalized?
             stride, // Stride
-            @intToPtr(?*c_void, offset), // Offset
+            @intToPtr(?*c_void, offset_position), // Offset
         );
 
         // Vertex Attributes are disabled by default, we need to enable them.
         // glEnableVertexAttribArray(GLuint index)
         c.glEnableVertexAttribArray(index_zero);
+
+        // Color Attribute
+        c.glVertexAttribPointer(
+            index_one, // Which vertex attribute we want to configure
+            size, // Size of vertex attribute (vec3 in this case)
+            c.GL_FLOAT, // Type of data
+            c.GL_FALSE, // Should the data be normalized?
+            stride, // Stride
+            @intToPtr(?*c_void, offset_color), // Offset
+        );
+
+        // Enable Color Attributes
+        c.glEnableVertexAttribArray(index_one);
 
         // Unbind the VBO
         c.glBindBuffer(c.GL_ARRAY_BUFFER, index_zero);
@@ -179,7 +186,7 @@ pub const OpenGlBackend = struct {
         c.glClear(c.GL_COLOR_BUFFER_BIT);
 
         // glUseProgramm(GLuint program)
-        c.glUseProgram(self.shader_program.?.handle);
+        self.shader_program.?.use();
 
         self.vertex_array.?.bind();
 
@@ -409,6 +416,7 @@ pub const GlShaderType = enum(c_uint) {
 const GlShader = struct {
     /// OpenGL generated ID
     handle: c_uint,
+    shader_type: GlShaderType,
 
     /// Builds the shader of the requested shader type
     /// Returns: void
@@ -416,6 +424,7 @@ const GlShader = struct {
     pub fn build(self: *GlShader, shader_type: GlShaderType) void {
         // glCreateShader(GLenum shaderType)
         self.handle = c.glCreateShader(@enumToInt(shader_type));
+        self.shader_type = shader_type;
     }
 
     /// Frees the stored shader handle
@@ -426,13 +435,35 @@ const GlShader = struct {
     }
 
     /// Sources a given GLSL shader file
-    /// Returns: void
-    /// source_string: [:0]const u8 - Raw form of a GLSL file
-    pub fn source(self: *GlShader, source_string: [:0]const u8) void {
-        const source_size = source_string.len;
+    /// Returns: anyerror!void
+    /// filename: [:0]const u8 - The filename of the source GLSL file
+    pub fn source(self: *GlShader, filename: [:0]const u8) anyerror!void {
+        // Open the shader directory
+        var dir = try std.fs.cwd().openDir(
+            "src/renderer/shaders",
+            .{},
+        );
+
+        // Get the source file
+        const file = try dir.openFile(
+            filename,
+            .{},
+        );
+
+        defer (&dir).close();
+        defer file.close();
+
+        // Create a buffer to store the file read in
+        var file_buffer: [4096]u8 = undefined;
+
+        try file.seekTo(0);
+
+        const source_bytes = try file.readAll(&file_buffer);
+        const source_slice = file_buffer[0..source_bytes];
+        const source_size = source_slice.len;
 
         //glShaderSource(GLuint shader, GLsizei count, const GLchar** string, const GLint *length)
-        c.glShaderSource(self.handle, 1, &source_string.ptr, @ptrCast(*const c_int, &source_size));
+        c.glShaderSource(self.handle, 1, &source_slice.ptr, @ptrCast(*const c_int, &source_size));
     }
 
     /// Compiles the previously sources GLSL shader file, and checks for any compilation errors.
@@ -451,7 +482,7 @@ const GlShader = struct {
         if (no_errors == 0) {
             //glGetShaderInfoLog(GLuint shader, GLsizei maxLength, GLsizei *length, GLchar *infoLog)
             c.glGetShaderInfoLog(self.handle, 512, null, &compilation_log);
-            std.log.err("[Renderer][OpenGL]: Failed to compile shader: \n{s}", .{compilation_log});
+            std.log.err("[Renderer][OpenGL]: Failed to compile {s} shader: \n{s}", .{ self.shader_type, compilation_log });
             return OpenGlError.ShaderCompilationFailure;
         }
     }
@@ -479,15 +510,17 @@ const GlShaderProgram = struct {
     /// OpenGL generated ID
     handle: c_uint,
 
+    const Self = @This();
+
     /// Builds the shader program
     /// Returns: void
-    pub fn build(self: *GlShaderProgram) void {
+    pub fn build(self: *Self) void {
         // glCreateProgram()
         self.handle = c.glCreateProgram();
     }
 
     /// Frees the OpenGL reference
-    pub fn free(self: *GlShaderProgram) void {
+    pub fn free(self: *Self) void {
         //glDeleteProgram(GLuint program)
         c.glDeleteProgram(self.handle);
     }
@@ -495,14 +528,14 @@ const GlShaderProgram = struct {
     /// Attaches the requested shader to be used for rendering
     /// Returns: void
     /// shader: *GlShader - A pointer to the requested shader
-    pub fn attach(self: *GlShaderProgram, shader: *GlShader) void {
+    pub fn attach(self: *Self, shader: *GlShader) void {
         //glAttachShaer(GLuint program, GLuint shader)
         c.glAttachShader(self.handle, shader.*.handle);
     }
 
     /// Links the shader program and checks for any errors
     /// Returns: anyerror!void
-    pub fn link(self: *GlShaderProgram) anyerror!void {
+    pub fn link(self: *Self) anyerror!void {
         var no_errors: c_int = undefined;
         var linking_log: [512]u8 = undefined;
 
@@ -520,6 +553,45 @@ const GlShaderProgram = struct {
             return OpenGlError.ShaderLinkingFailure;
         }
     }
+
+    /// Tells OpenGL to make this the active pipeline
+    /// Returns: void
+    pub fn use(self: *Self) void {
+        // glUseProgram(GLuint)
+        c.glUseProgram(self.handle);
+    }
+
+    /// Sets a uniform boolean of `name` to the requested `value`
+    /// Returns: void
+    /// name: [:0]const u8 - The name of the uniform
+    /// value: bool - The value to set the uniform to
+    pub fn setBool(self: *Self, name: [:0]const u8, value: bool) void {
+        const uniform_location = c.glUniformLocation(self.handle, &name.ptr);
+        const int_value: c_int = @as(c_int, value);
+        // glUniform1i(GLint location, GLint)
+        c.glUniform1i(uniform_location, int_value);
+    }
+    
+    /// Sets a uniform integer of `name` to the requested `value`
+    /// Returns: void
+    /// name: [:0]const u8 - The name of the uniform
+    /// value: i32 - The value to set the uniform to
+    pub fn setInt(self: *Self, name: [:0]const u8, value: i32) void {
+        const uniform_location = c.glUniformLocation(self.handle, &name.ptr);
+        const int_value: c_int = @as(c_int, value);
+        // glUniform1i(GLint location, GLint)
+        c.glUniform1i(uniform_location, int_value);
+    }
+    
+    /// Sets a uniform float of `name` to the requested `value`
+    /// Returns: void
+    /// name: [:0]const u8 - The name of the uniform
+    /// value: f32 - The value to set the uniform to
+    pub fn setFloat(self: *Self, name: [:0]const u8, value: f32) void {
+        const uniform_location = c.glUniformLocation(self.handle, &name.ptr);
+        // glUniform1f(GLint location, GLfloat)
+        c.glUniform1f(uniform_location, value);
+    }
 };
 
 /// Allocates an GlShaderProgram and sets it up
@@ -532,4 +604,19 @@ fn buildGlShaderProgram(allocator: *std.mem.Allocator) anyerror!*GlShaderProgram
     sp.build();
 
     return sp;
+}
+
+test "Read Shader Test" {
+    const file = try std.fs.cwd().openFile(
+        "src/renderer/shaders/default_shader.vs",
+        .{},
+    );
+
+    defer file.close();
+
+    var buffer: [4096]u8 = undefined;
+    try file.seekTo(0);
+    const bytes_read = try file.readAll(&buffer);
+    const slice = buffer[0..bytes_read];
+    std.debug.print("{s}\n", .{slice});
 }

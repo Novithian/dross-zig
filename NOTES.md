@@ -37,4 +37,11 @@
     - Calls to glEnableVertexAttribArray or glDisableVertexAttribArray.
     - Vertex attribute configurations via glVertexAttribPointer.
     - Vertex buffer objects associated with vertex attributes by calls to glVertexAttribPointer
-    - [Source](https://learnopengl.com/img/getting-started/vertex_array_objects.png)
+    - [Source](https://learnopengl.com/img/getting-started/vertex_attribute_pointer_interleaved.png)
+
+### GLSL ###
+- When talking about the vertex sahder, each input variable is known as an **Vertex Attribute**.
+- There is a maximum number of vertiex attrivutes that we're allowed to declare. OpenGL guarantees there are always at least 16 4-component VAs, but some hardware may allow more.
+- **Uniforms** are another way to pass data from our CPU to the shaders on the GPU. They are global, in the sense that a uniform variable is unique per shader program object, and can be accessed from any shader at any stage in the shader program.
+- **Uniforms** keep their values until they're either reset or updated.
+- **NOTE**: Keep in mind that if you declare a uniform that isn't used anywhere in your GLSL code, the compiler will silently remove the variable from the compiled version. 

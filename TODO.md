@@ -1,10 +1,18 @@
 ## **TODO** ##
 --------------
-- 
+- Start working on OpenGL Textures
+
 ## **LOG** ##
 -------------
+- **[05-05-2021]**
+    - Add a use helper method to the shader program
+    - Add uniform helper methods to the shader program struct
 - **[05-04-2021]**
     - Move most of application build code to build method in app
+    - Add shader type to shader compilation failure error message
+    - Add color inputs to the shaders
+    - Automatically read a shader file and input it to a something.
+    - Updated README
 - **[05-03-2021]**
     - Render a triangle
     - ShaderProgram

@@ -101,7 +101,7 @@ pub const Application = struct {
     /// Process the application input
     /// Returns: void
     pub fn processInput(self: *Application) void {
-        if(c.glfwGetKey(self.window, c.GLFW_KEY_ESCAPE) == c.GLFW_PRESS) c.glfwSetWindowShouldClose(self.window, c.GL_TRUE);
+        if (c.glfwGetKey(self.window, c.GLFW_KEY_ESCAPE) == c.GLFW_PRESS) c.glfwSetWindowShouldClose(self.window, c.GL_TRUE);
     }
 
     /// Resize the application
@@ -131,7 +131,7 @@ pub const Application = struct {
 pub fn buildApplication(allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, height: c_int) anyerror!*Application {
     var app: *Application = try allocator.create(Application);
 
-    try app.build(allocator, title, width, height);   
+    try app.build(allocator, title, width, height);
 
     return app;
 }
