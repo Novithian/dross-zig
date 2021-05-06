@@ -14,7 +14,7 @@ pub const BackendApi = enum(u8) {
     //Metal, // Will probably never happen as it is such a smaller portion
 };
 
-pub var api: BackendApi = BackendApi.OpenGl;
+pub const api: BackendApi = BackendApi.OpenGl;
 
 // -----------------------------------------
 //      - Renderer -

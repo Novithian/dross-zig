@@ -28,7 +28,18 @@
 - **Vertex Array**: Known in OpenGL as **Vertex Array Objects(VAOs)**. Once bound, any subsequent vertex attirbute calls will be stored inside the VAO.
 - **Index Buffer**: Known in OpenGL as **Element Buffer Objects(EBOs)**. Stores indices that will be used to decide what vertices to draw. Eliminates multiple vertices at the same position. So instead of using 6 vertices to draw a rectangle(2 triangles), using indices we only need 4 vertices. 
 - **Indexed Drawing**: The process of using index buffers to eliminate the need of overlapping vertices.
-
+- **Texture**: A image (typically 2D) used to add detail to an object.
+- **Texture Coodinate**: Specifies what portion of the image to sample from. Range from (0,1) for 2d. The origin (0,0) is in the bottom left.
+    - [source](https://learnopengl.com/img/getting-started/tex_coords.png)
+- **Sampling**: The process of retrieving the texture color using the texture coordinates.
+- **Texture Wrapping**: The handling of what to do with the texture when it goes outside the range of the texture coordinates( (0,0) to (1,1) ).
+    - [source](https://learnopengl.com/img/getting-started/texture_wrapping.png)
+- **Texel**: Texture Pixel
+- **Texture Filtering**: (CHECK FOR ACTUAL DEFINITION) The process of which **texel** to map to the **texture coordinate**. 
+    - **Nearest**: Also called nearest neighbor or point filtering. Selects the texel whose center is closest to the texture coordinate.
+    - **Linear**: Also known as bilinear filtering. Interpolates the color values from the texture coordinates's neighboring texels.
+- **Magnifying and Minifying**: During these operations, different texture filtering can be used depending on the operation. Such as Nearest filtering for minifying operations, and Linear for magnifying operations.
+- **Mipmaps**: A collection of texture images where each subdequent texture is twice as small compared to the previous one.
 
 ### OpenGL ###
 - OpenGL allows for binding several buffers at once, as long as they have a different buffer type.

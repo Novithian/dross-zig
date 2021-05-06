@@ -22,6 +22,9 @@ pub fn build(b: *std.build.Builder) void {
     exe.addIncludeDir("libs/glad");
     exe.addCSourceFile("libs/glad/src/glad.c", &[_][]const u8{"--std=c99"});
 
+    exe.addIncludeDir("libs/stb_image");
+    exe.addCSourceFile("libs/stb_image/stb_image_impl.c", &[_][]const u8{"--std=c17"});
+
     exe.linkSystemLibrary("glfw3");
     exe.linkSystemLibrary("opengl32");
 

@@ -1,12 +1,15 @@
 ## **TODO** ##
 --------------
-- Start working on OpenGL Textures
+- Update documentation
 
 ## **LOG** ##
 -------------
 - **[05-05-2021]**
     - Add a use helper method to the shader program
     - Add uniform helper methods to the shader program struct
+    - import stb_images.h
+    - Remove target_api parameter for buildTexture
+    - OpenGL Textures
 - **[05-04-2021]**
     - Move most of application build code to build method in app
     - Add shader type to shader compilation failure error message

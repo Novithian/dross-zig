@@ -1,19 +1,31 @@
+// Third Parties
 const c = @import("../../c_global.zig").c_imp;
 const std = @import("std");
+
+// dross-zig
 const Color = @import("../../core/core.zig").Color;
+const texture = @import("../texture.zig");
 
 // Testing vertices and indices
-const square_vertices: [24]f32 = [24]f32{
-    // Positions  | Colors
-    0.5, 0.5, 0.0, 1.0, 0.0, 0.0, // Top Right
-    0.5, -0.5, 0.0, 0.5, 1.0, 0.0, // Bottom Right
-    -0.5, -0.5, 0.0, 0.0, 1.0, 0.0, // Bottom Left
-    -0.5, 0.5, 0.0, 0.0, 0.0, 1.0, // Top Left
+// zig fmt: off
+const square_vertices: [32]f32 = [32]f32{
+    // Positions        | Colors        | Texture coords
+    0.5, 0.5, 0.0,      1.0, 0.0, 0.0,  1.0, 1.0, // Top Right
+    0.5, -0.5, 0.0,     0.0, 1.0, 0.0,  1.0, 0.0,// Bottom Right
+    -0.5, -0.5, 0.0,    0.0, 0.0, 1.0,  0.0, 0.0,// Bottom Left
+    -0.5, 0.5, 0.0,     1.0, 1.0, 1.0,  0.0, 1.0,// Top Left
 };
 
 const square_indices: [6]c_uint = [6]c_uint{
     0, 1, 3,
     1, 2, 3,
+};
+
+const square_tex_coords: [8]f32 = [8]f32{
+    0.0, 0.0, // Bottom left
+    1.0, 0.0, // Bottom right
+    1.0, 1.0, // Top right
+    0.0, 1.0, // Top left
 };
 
 // -----------------------------------------
@@ -54,11 +66,16 @@ pub const OpenGlBackend = struct {
     vertex_buffer: ?*GlVertexBuffer,
     index_buffer: ?*GlIndexBuffer,
 
+    debug_texture: ?*texture.Texture,
+
     /// Builds the necessary components for the OpenGL renderer
     /// allocator: *std.mem.Allocator - The allocator used to manually allocate any necessary resources
     /// Returns: anyerror!void
     /// Comment: INTERNAL use only. The OpenGlBackend will be the owner of the allocated memory.
     pub fn build(self: *OpenGlBackend, allocator: *std.mem.Allocator) anyerror!void {
+
+        c.glPixelStorei(c.GL_UNPACK_ALIGNMENT, 1);
+
         // Allocate and compile the vertex shader
         var vertex_shader: *GlShader = try buildGlShader(allocator, GlShaderType.Vertex);
         try vertex_shader.source(default_shader_vs);
@@ -106,13 +123,16 @@ pub const OpenGlBackend = struct {
         var indicies_slice = square_indices[0..];
         self.index_buffer.?.data(indicies_slice, GlBufferUsage.StaticDraw);
 
-        const size_of_vatb = 6;
+        const size_of_vatb = 8;
         const stride = @intCast(c_longlong, @sizeOf(f32) * size_of_vatb);
         const offset_position: u32 = 0;
         const offset_color: u32 = 3 * @sizeOf(f32);
+        const offset_tex: u32 =  6 * @sizeOf(f32); // position offset(0) + color offset + the length of the color bytes
         const index_zero: c_int = 0;
         const index_one: c_int = 1;
+        const index_two: c_int = 2;
         const size: c_uint = 3;
+        const tex_coord_size: c_uint = 2;
 
         // Tells OpenGL how to interpret the vertex data(per vertex attribute)
         // Uses the data to the currently bound VBO
@@ -146,6 +166,19 @@ pub const OpenGlBackend = struct {
 
         // Enable Color Attributes
         c.glEnableVertexAttribArray(index_one);
+        
+        // Texture Coordinates Attribute
+        c.glVertexAttribPointer(
+            index_two, // Which vertex attribute we want to configure
+            tex_coord_size, // Size of vertex attribute (vec2 in this case)
+            c.GL_FLOAT, // Type of data
+            c.GL_FALSE, // Should the data be normalized?
+            stride, // Stride
+            @intToPtr(?*c_void, offset_tex), // Offset
+        );
+
+        // Enable Color Attributes
+        c.glEnableVertexAttribArray(index_two);
 
         // Unbind the VBO
         c.glBindBuffer(c.GL_ARRAY_BUFFER, index_zero);
@@ -158,6 +191,11 @@ pub const OpenGlBackend = struct {
         c.glBindVertexArray(index_zero);
 
         // c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE);
+
+        // TODO(devon): remove 
+        // For debug purposes only
+        self.debug_texture = try texture.buildTexture(allocator);
+
     }
 
     /// Frees up any resources that was previously allocated
@@ -165,12 +203,14 @@ pub const OpenGlBackend = struct {
     /// Returns: void
     pub fn free(self: *OpenGlBackend, allocator: *std.mem.Allocator) void {
         // Allow for OpenGL object to de-allocate any memory it needed
+        self.debug_texture.?.free(allocator);
         self.vertex_array.?.free();
         self.vertex_buffer.?.free();
         self.index_buffer.?.free();
         self.shader_program.?.free();
 
         // Free memory
+        allocator.destroy(self.debug_texture.?);
         allocator.destroy(self.vertex_array.?);
         allocator.destroy(self.vertex_buffer.?);
         allocator.destroy(self.index_buffer.?);
@@ -187,6 +227,10 @@ pub const OpenGlBackend = struct {
 
         // glUseProgramm(GLuint program)
         self.shader_program.?.use();
+
+        // Bind Texture
+        // c.glActiveTexture(c.GL_TEXTURE0);
+        c.glBindTexture(c.GL_TEXTURE_2D, self.debug_texture.?.getGlId());
 
         self.vertex_array.?.bind();
 
@@ -571,7 +615,7 @@ const GlShaderProgram = struct {
         // glUniform1i(GLint location, GLint)
         c.glUniform1i(uniform_location, int_value);
     }
-    
+
     /// Sets a uniform integer of `name` to the requested `value`
     /// Returns: void
     /// name: [:0]const u8 - The name of the uniform
@@ -582,7 +626,7 @@ const GlShaderProgram = struct {
         // glUniform1i(GLint location, GLint)
         c.glUniform1i(uniform_location, int_value);
     }
-    
+
     /// Sets a uniform float of `name` to the requested `value`
     /// Returns: void
     /// name: [:0]const u8 - The name of the uniform
