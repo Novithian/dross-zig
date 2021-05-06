@@ -1,9 +1,19 @@
 ## **TODO** ##
 --------------
-- Update documentation
+- 
 
 ## **LOG** ##
 -------------
+- **[05-06-2021]**
+    - Added zalgebra as an dependency for linear algebra
+    - Implmented a basic delta time
+    - Updated documentation from the texture files from yesterday.
+    - Update documentation to remove the parametes and return type
+        - New format being description and comments.
+            - **Description:** What could this mean?
+            - **Comments:** Any noteworthy additions, such as memory ownership (if the method/function is passed an allocator), internal use only, etc.
+    - Update comments to remove opengl function signatures and consolidate them in zig_gl_conversions.md
+    - Log the conversion methods between OpenGL and Zig in zig_gl_conversions.md
 - **[05-05-2021]**
     - Add a use helper method to the shader program
     - Add uniform helper methods to the shader program struct

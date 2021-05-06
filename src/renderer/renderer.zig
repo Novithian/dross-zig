@@ -27,12 +27,7 @@ pub const Renderer = struct {
     clear_color: Color,
 
     /// Resizes the viewport to the given size and position 
-    /// Returns: void
-    /// x: c_int - x position of the viewport
-    /// y: c_int - y position of the viewport
-    /// width: c_int - width of the viewport
-    /// height: c_int - height of the viewport
-    /// Comment: INTERNAL use only.
+    /// Comments: INTERNAL use only.
     pub fn resizeViewport(self: *Renderer, x: c_int, y: c_int, width: c_int, height: c_int) void {
         switch (api) {
             BackendApi.OpenGl => {
@@ -44,12 +39,11 @@ pub const Renderer = struct {
     }
 
     /// Handles the rendering process
-    /// Returns: void
-    /// Comment: INTERNAL use only.
-    pub fn render(self: *Renderer) void {
+    /// Comments: INTERNAL use only.
+    pub fn render(self: *Renderer, delta: f64) void {
         switch (api) {
             BackendApi.OpenGl => {
-                self.gl_backend.?.render(self.clear_color);
+                self.gl_backend.?.render(delta, self.clear_color);
             },
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},
@@ -57,9 +51,7 @@ pub const Renderer = struct {
     }
 
     /// Builds the graphics API
-    /// Returns: anyerror!void
-    /// allocator: *std.mem.Allocator - The main application allocator 
-    /// Comment: INTERNAL use only. The Renderer will be the owner of the allocated memory.
+    /// Comments: INTERNAL use only. The Renderer will be the owner of the allocated memory.
     pub fn build(self: *Renderer, allocator: *std.mem.Allocator) anyerror!void {
         self.clear_color = Color.rgb(0.2, 0.2, 0.2);
         switch (api) {
@@ -72,9 +64,7 @@ pub const Renderer = struct {
     }
 
     /// Frees any allocated memory that the Renderer owns
-    /// Returns: void
-    /// allocator: *std.mem.Allocator - The allocator that generated the memory
-    /// Comment: INTERNAL use only.
+    /// Comments: INTERNAL use only.
     pub fn free(self: *Renderer, allocator: *std.mem.Allocator) void {
         switch (api) {
             BackendApi.OpenGl => {
@@ -87,7 +77,6 @@ pub const Renderer = struct {
     }
 
     /// Window resize callback for GLFW
-    /// Returns: void
     /// Comments: INTERNAL use only.
     pub fn resizeInternal(window: ?*c.GLFWwindow, width: c_int, height: c_int) callconv(.C) void {
         var x_pos: c_int = 0;
@@ -106,9 +95,7 @@ pub const Renderer = struct {
 };
 
 /// Allocates and builds the renderer
-/// Returns: anyerror!*Renderer
-/// allocator: *std.mem.Allocator - The main application allocator
-/// Comment: INTERNAL use only. The caller will be the owner of the returned pointer.
+/// Comments: INTERNAL use only. The caller will be the owner of the returned pointer.
 pub fn buildRenderer(allocator: *std.mem.Allocator) anyerror!*Renderer {
     var renderer: *Renderer = try allocator.create(Renderer);
 

@@ -19,7 +19,7 @@ pub const Texture = struct {
 
     const Self = @This();
 
-    /// TODO(devon): desc texture build
+    /// Setups up the Texture and allocates and required memory
     fn build(self: *Self, allocator: *std.mem.Allocator) !void {
         switch (selected_api) {
             renderer.BackendApi.OpenGl => {
@@ -30,7 +30,7 @@ pub const Texture = struct {
         }
     }
 
-    /// TODO(devon): desc texture free
+    /// Deallocates any owned memory that was required for operation
     pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
         switch(selected_api) {
             renderer.BackendApi.OpenGl => {
@@ -46,15 +46,13 @@ pub const Texture = struct {
         }
     }
 
-    /// TODO(devon): desc texture id
+    /// Returns the OpenGL generated texture ID
     pub fn getGlId(self: *Self) c_uint {
         return self.gl_texture.?.id;
     }
 };
 
 /// Allocates and builds a texture object depending on the target_api
-/// Returns: anyerror!*Texture
-/// allocator: *std.mem.Allocator - The allocator to allocate a memory block for the texture
 /// Comments: The caller owns the Texture
 pub fn buildTexture(allocator: *std.mem.Allocator) anyerror!*Texture {
     var texture: *Texture = try allocator.create(Texture);

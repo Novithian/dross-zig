@@ -27,7 +27,6 @@ pub const OpenGlTexture = struct {
     const Self = @This();
 
     /// Builds the OpenGLTexture object and allocates any required memory
-    /// Returns: anyerror!void
     pub fn build(self: *Self) anyerror!void {
         const number_of_textures: c_int = 1;
         const desired_channels: c_int = 0;
@@ -35,7 +34,6 @@ pub const OpenGlTexture = struct {
         const border: c_int = 0;
 
         // Generate texture ID
-        // glGenTexture(GLsizei n, GLuint* textures)
         c.glGenTextures(number_of_textures, @ptrCast(*c_uint, &self.id));
 
         // Bind the texture
@@ -78,32 +76,11 @@ pub const OpenGlTexture = struct {
         const pitch = width * bits_per_channel * channel_count / 8;
         self.data = image_data[0.. height * pitch];
 
-
-        // Load the data from the image
-        // var data = c.stbi_load(
-        //     // "../../../assets/sprites/s_guy_idle.png", // Image Path
-        //     "assets/sprites/s_guy_idle.png", // Image Path
-        //     &self.width, 
-        //     &self.height,
-        //     &self.channels,
-        //     // @ptrCast(*c_int, &self.width), // pointer to width address
-        //     // @ptrCast(*c_int, &self.height), // pointer to height address
-        //     // @ptrCast(*c_int, &self.channels), // pointer to channels address
-        //     c.STBI_rgb_alpha, // desired channels
-        // );
-        // const data = c.stbi_load_from_memory(
-
-        // );
-
         c.glPixelStorei(c.GL_UNPACK_ALIGNMENT, 4);
 
         // Generate gl texture
 
-        // glTexImage2D(GLenumn target, GLint, level,
-        //              GLint internal_format, GLsizei width,
-        //              GLsizei height, GLint border,
-        //              GLenum format, GLenum type,
-        //              const GLvoid* data)
+        
         c.glTexImage2D(
             c.GL_TEXTURE_2D, // Texture Target
             mipmap_level, // mipmap detail level
@@ -120,26 +97,23 @@ pub const OpenGlTexture = struct {
         c.glGenerateMipmap(c.GL_TEXTURE_2D);
     }
 
-    /// TODO(devon): opengl texture free
+    /// Frees the allocated memory that OpenGlTexture required to function. 
     pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
         c.stbi_image_free(self.data.ptr);
     }
 
-    /// TODO(devon): opengl texture id
+    /// Returns the OpenGL generated texture id
     pub fn id(self: *Self) c_uint {
         if(self.id == 0) @panic("[Renderer][OpenGL]: Texture ID of 0 is NOT valid!");
         return self.id;
     }
 };
 
-/// Allocates and builds the Opengl
-/// Returns: anyerror!*OpenGlTexture
-/// allocator: *std.mem.Allocator - The allocator to allocate a memory block for the texture
+/// Allocates and builds the Opengl Texture implementation
 /// Comments: The dross-zig Texture owns the Texture
 pub fn buildOpenGlTexture(allocator: *std.mem.Allocator) anyerror!*OpenGlTexture {
-    // var internal_texture: *InternalTexture = try allocator.create(InternalTexture);
     var internal_texture: *OpenGlTexture = try allocator.create(OpenGlTexture);
-    // internal_texture.OpenGl = try.allocator.create(OpenGLTexture);
+
     try internal_texture.build();
 
     return internal_texture;

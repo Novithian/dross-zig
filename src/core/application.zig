@@ -5,7 +5,6 @@ const std = @import("std");
 const gfx = @import("../renderer/renderer.zig");
 
 /// User defined update/tick function
-/// Returns: void
 pub extern fn update(delta: f64) void;
 
 /// Error Set for Application-related Errors
@@ -15,6 +14,10 @@ pub const ApplicationError = error{
     WindowCreation,
     WindowInit,
 };
+
+/// TODO(devon): Remove when shipping
+pub var debug_mode = false;
+pub var pause = false;
 
 // -----------------------------------------
 //      - Application -
@@ -27,19 +30,27 @@ pub const Application = struct {
     renderer: ?*gfx.Renderer = undefined,
     window: *c.GLFWwindow = undefined,
     allocator: ?*std.mem.Allocator = undefined,
+    previous_frame_time: f64 = 0,
 
     /// Runs the applications main event loop. 
-    /// Returns: void
     pub fn run(self: *Application) void {
         while (c.glfwWindowShouldClose(self.window) == 0) {
+            // Calculate timestep
+            const current_time = c.glfwGetTime(); 
+            var delta = current_time - self.previous_frame_time;
+            self.previous_frame_time = current_time;
+
+            // TODO(devon): Remove when shipping
+            if(debug_mode and pause) delta = 0;
+
             // Process input
             self.processInput();
 
             // Update
-            update(1.0);
+            update(delta);
 
             // Render
-            self.renderer.?.render();
+            self.renderer.?.render(delta);
 
             // Submit
             c.glfwSwapBuffers(self.window);
@@ -48,11 +59,6 @@ pub const Application = struct {
     }
 
     /// Allocates the necessary components to run the application
-    /// Returns: anyerror!void
-    /// allocator: *std.mem.Allocator - An allocator possed from the Application's entry point.
-    /// title: [*c]const u8 - The title of the application's window
-    /// width: c_int - The initial width of the application's window
-    /// height: c_int - The initial height of the application's window
     /// Comments: The application will own any memory allocated.
     pub fn build(self: *Application, allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, height: c_int) anyerror!void {
         // Initialze GLFW, returns GL_FALSE if an error occured.
@@ -85,8 +91,7 @@ pub const Application = struct {
     /// Gracefully terminates the Application by cleaning up
     /// manually allocated memory as well as some other backend
     /// cleanup.
-    /// Returns: void
-    /// Comment: Be sure to call before exiting program!    
+    /// Comments: Be sure to call before exiting program!    
     /// defer gpa.allocator.destroy(app);
     /// defer app.*.free()
     pub fn free(self: *Application) void {
@@ -99,34 +104,45 @@ pub const Application = struct {
     }
 
     /// Process the application input
-    /// Returns: void
     pub fn processInput(self: *Application) void {
+        // TODO(devon): Remove when shipping
         if (c.glfwGetKey(self.window, c.GLFW_KEY_ESCAPE) == c.GLFW_PRESS) c.glfwSetWindowShouldClose(self.window, c.GL_TRUE);
+        if (c.glfwGetKey(self.window, c.GLFW_KEY_F1) == c.GLFW_PRESS) {
+            if(debug_mode){
+                debug_mode = false;
+                pause = false;               
+                self.setWindowTitle("Dross-Zig Application");
+            }else {
+                debug_mode = true;
+                self.setWindowTitle("[DEBUG] Dross-Zig Application");
+            } 
+        }
+        if(c.glfwGetKey(self.window, c.GLFW_KEY_P) == c.GLFW_PRESS) {
+            if(debug_mode) {
+                if(pause) {
+                    pause = false;
+                    self.setWindowTitle("[DEBUG] Dross-Zig Application");
+                } else {
+                    pause = true;
+                    self.setWindowTitle("[DEBUG][PAUSED] Dross-Zig Application");
+                }
+            }
+        }
     }
-
+   
     /// Resize the application
-    /// Returns: void
-    /// x: c_int - x position of the application
-    /// y: c_int
     pub fn resize(self: *Application, x: c_int, y: c_int, width: c_int, height: c_int) void {
         // Call renderer's resize method
         self.renderer.?.resizeViewport(x, y, width, height);
     }
 
     /// Sets the application's window title
-    /// Returns: void
-    /// title: [*c]const u8
     pub fn setWindowTitle(self: *Application, title: [*c]const u8) void {
         c.glfwSetWindowTitle(self.window, title);
     }
 };
 
 /// Allocated and builds the constituent components of an Application.
-/// Returns: anyerror!*Application
-/// allocator: *std.mem.Allocator - The main application allocator
-/// title: [*c]const u8 - The title of the application's window
-/// width: c_int - The initial width of the application's window
-/// height: c_int - The initial height of the application's window
 /// Comments: The caller will be the owner of the returned pointer.
 pub fn buildApplication(allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, height: c_int) anyerror!*Application {
     var app: *Application = try allocator.create(Application);

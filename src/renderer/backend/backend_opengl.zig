@@ -1,6 +1,9 @@
 // Third Parties
 const c = @import("../../c_global.zig").c_imp;
 const std = @import("std");
+const za = @import("zalgebra");
+const Vec3 = za.vec3;
+const Mat4 = za.mat4;
 
 // dross-zig
 const Color = @import("../../core/core.zig").Color;
@@ -58,8 +61,7 @@ pub const OpenGlError = error{
 // -----------------------------------------
 
 /// Backend Implmentation for OpenGL
-/// Returns: void
-/// Comment: This is for INTERNAL use only. 
+/// Comments: This is for INTERNAL use only. 
 pub const OpenGlBackend = struct {
     shader_program: ?*GlShaderProgram,
     vertex_array: ?*GlVertexArray,
@@ -68,10 +70,10 @@ pub const OpenGlBackend = struct {
 
     debug_texture: ?*texture.Texture,
 
+    transform: ?Mat4,
+
     /// Builds the necessary components for the OpenGL renderer
-    /// allocator: *std.mem.Allocator - The allocator used to manually allocate any necessary resources
-    /// Returns: anyerror!void
-    /// Comment: INTERNAL use only. The OpenGlBackend will be the owner of the allocated memory.
+    /// Comments: INTERNAL use only. The OpenGlBackend will be the owner of the allocated memory.
     pub fn build(self: *OpenGlBackend, allocator: *std.mem.Allocator) anyerror!void {
 
         c.glPixelStorei(c.GL_UNPACK_ALIGNMENT, 1);
@@ -137,9 +139,6 @@ pub const OpenGlBackend = struct {
         // Tells OpenGL how to interpret the vertex data(per vertex attribute)
         // Uses the data to the currently bound VBO
 
-        // glVertexAttribPointer(GLuint index, Glint size, GLenum type,
-        //      GLboolean normalized, GLsizei stride, const GLvoid *pointer)
-
         // Position Attribute
         c.glVertexAttribPointer(
             index_zero, // Which vertex attribute we want to configure
@@ -151,7 +150,6 @@ pub const OpenGlBackend = struct {
         );
 
         // Vertex Attributes are disabled by default, we need to enable them.
-        // glEnableVertexAttribArray(GLuint index)
         c.glEnableVertexAttribArray(index_zero);
 
         // Color Attribute
@@ -190,17 +188,15 @@ pub const OpenGlBackend = struct {
         // Unbind the VAO
         c.glBindVertexArray(index_zero);
 
-        // c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE);
 
         // TODO(devon): remove 
         // For debug purposes only
         self.debug_texture = try texture.buildTexture(allocator);
+        self.transform = Mat4.identity();
 
     }
 
     /// Frees up any resources that was previously allocated
-    /// allocator: *std.mem.Allocator - Allocator used to free the previously allocated resources
-    /// Returns: void
     pub fn free(self: *OpenGlBackend, allocator: *std.mem.Allocator) void {
         // Allow for OpenGL object to de-allocate any memory it needed
         self.debug_texture.?.free(allocator);
@@ -218,26 +214,38 @@ pub const OpenGlBackend = struct {
     }
 
     /// Handles the OpenGL specific functionality
-    /// Returns: void
-    /// Comment: INTERNAL use only.
-    pub fn render(self: *OpenGlBackend, clear_color: Color) void {
+    /// Comments: INTERNAL use only.
+    pub fn render(self: *OpenGlBackend, delta: f64, clear_color: Color) void {
+
+        // Debug transforms
+        const rotation_speed: f64 = 100.0;
+        self.transform = self.transform.?.rotate(@floatCast(f32, delta * rotation_speed), Vec3.new(0.0, 0.0, 1.0));
+
         // Clear the background with the specified color
         c.glClearColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
         c.glClear(c.GL_COLOR_BUFFER_BIT);
-
-        // glUseProgramm(GLuint program)
+ 
+        // Bind Texture
+        c.glBindTexture(c.GL_TEXTURE_2D, self.debug_texture.?.getGlId());
+        
+        // Tell OpenGL which shader program's pipeline we want to use
         self.shader_program.?.use();
 
-        // Bind Texture
-        // c.glActiveTexture(c.GL_TEXTURE0);
-        c.glBindTexture(c.GL_TEXTURE_2D, self.debug_texture.?.getGlId());
+        const transformLocation: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "transform");
+        c.glUniformMatrix4fv(
+            transformLocation,  // Location
+            1,                  // count
+            c.GL_FALSE,         // transpose from column-major to row-major
+            @ptrCast(*const f32, &self.transform.?)// data
+        );
 
+        // Bind the VAO
         self.vertex_array.?.bind();
 
         const number_of_vertices: i32 = 6;
         const offset = @intToPtr(?*c_void, 0);
 
-        // glDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid* indices)
+        // Draw 
         c.glDrawElements(
             c.GL_TRIANGLES, // Primitive mode
             6, // Number of vertices/elements to draw
@@ -248,21 +256,13 @@ pub const OpenGlBackend = struct {
 };
 
 /// Resizes the viewport to the given size and position 
-/// Returns: void
-/// x: c_int - x position of the viewport
-/// y: c_int - y position of the viewport
-/// width: c_int - width of the viewport
-/// height: c_int - height of the viewport
-/// Comment: This is for INTERNAL use only.
+/// Comments: This is for INTERNAL use only.
 pub fn resizeViewport(x: c_int, y: c_int, width: c_int, height: c_int) void {
-    // glViewport(GLint x, GLint y, GLsizei width, GLsizei height)
     c.glViewport(x, y, width, height);
 }
 
-/// Calls the GLAD specific code required for setting up
-/// Returns: anyerror!void
-/// allocator: *std.mem.Allocator - The allocator that will allocate the backend
-/// Comment: Owned by the caller. This is for INTERNAL use only.
+/// Allocates the appropriate backend graphics api and calls the GLAD specific code required for setting up
+/// Comments: Owned by the caller. This is for INTERNAL use only.
 pub fn build(allocator: *std.mem.Allocator) anyerror!*OpenGlBackend {
     if (c.gladLoadGLLoader(@ptrCast(c.GLADloadproc, c.glfwGetProcAddress)) == 0) return OpenGlError.GladFailure;
 
@@ -298,42 +298,30 @@ const GlVertexBuffer = struct {
     handle: c_uint,
 
     /// Builds the Vertex Buffer
-    /// Returns: void
     pub fn build(self: *GlVertexBuffer) void {
-        // glGenBuffers(GLsizei size, GLuint* buffers)
         c.glGenBuffers(1, &self.handle);
     }
 
     /// Frees the Vertex Buffer
-    /// Returns: void
     pub fn free(self: *GlVertexBuffer) void {
-        //glDeleteBuffer(GLsizei count, GLuint buffer))
         c.glDeleteBuffers(1, &self.handle);
     }
 
     /// Binds the Vertex Buffer to the current buffer target.
-    /// Returns: void
     pub fn bind(self: *GlVertexBuffer) void {
-        // glBindBuffer(GLenum target, GLuint buffer)
         c.glBindBuffer(c.GL_ARRAY_BUFFER, self.handle);
     }
 
     /// Allocates memory and stores data within the the currently bound buffer object.
-    /// Returns: void
-    /// vertices: []const f32 - The vertices data to be written to the buffer object 
-    /// usage: GlBufferUsage - Describes how the vertices will be used over its lifetime.
     pub fn data(self: GlVertexBuffer, vertices: []const f32, usage: GlBufferUsage) void {
         const vertices_ptr = @ptrCast(*const c_void, vertices.ptr);
         const vertices_size = @intCast(c_longlong, @sizeOf(f32) * vertices.len);
 
-        // glBufferData(GLenum mode, Glsizeiptr size, const GLvoid* data, GLenum usage)
         c.glBufferData(c.GL_ARRAY_BUFFER, vertices_size, vertices_ptr, @enumToInt(usage));
     }
 };
 
 /// Allocates a vertex buffer and sets it up
-/// Return: anyerror!GlVertexBuffer
-/// allocator: *std.mem.Allocator - Allocator used to create the vertex buffer
 /// Comments: The caller will own the returned pointer.
 fn buildGlVertexBuffer(allocator: *std.mem.Allocator) anyerror!*GlVertexBuffer {
     var vbo = try allocator.create(GlVertexBuffer);
@@ -353,42 +341,30 @@ const GlIndexBuffer = struct {
     handle: c_uint,
 
     /// Build the Index Buffer
-    /// Returns: void
     pub fn build(self: *GlIndexBuffer) void {
-        // glGenBuffers(GLsizei size, GLuint* buffers)
         c.glGenBuffers(1, &self.handle);
     }
 
     /// Frees the Index Buffer
-    /// Returns: void
     pub fn free(self: *GlIndexBuffer) void {
-        //glDeleteBuffer(GLsizei count, GLuint buffer))
         c.glDeleteBuffers(1, &self.handle);
     }
 
     /// Binds the Index Buffer
-    /// Returns: void
     pub fn bind(self: *GlIndexBuffer) void {
-        // glBindBuffer(GLenum target, GLuint buffer)
         c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, self.handle);
     }
 
     /// Allocates memory and stores data within the the currently bound buffer object.
-    /// Returns: void
-    /// indices: []const c_uint - The indices data to be written to the buffer object 
-    /// usage: GlBufferUsage - Describes how the indices will be used over its lifetime.
     pub fn data(self: GlIndexBuffer, indices: []const c_uint, usage: GlBufferUsage) void {
         const indices_ptr = @ptrCast(*const c_void, indices.ptr);
         const indices_size = @intCast(c_longlong, @sizeOf(c_uint) * indices.len);
 
-        // glBufferData(GLenum mode, Glsizeiptr size, const GLvoid* data, GLenum usage)
         c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, indices_size, indices_ptr, @enumToInt(usage));
     }
 };
 
 /// Allocates an Index Buffer and sets it up
-/// Return: anyerror!GlIndexBuffer
-/// allocator: *std.mem.Allocator - Allocator used to create the index buffer
 /// Comments: The caller will own the returned pointer.
 fn buildGlIndexBuffer(allocator: *std.mem.Allocator) anyerror!*GlIndexBuffer {
     var ib = try allocator.create(GlIndexBuffer);
@@ -408,30 +384,22 @@ const GlVertexArray = struct {
     handle: c_uint,
 
     /// Build and generates the OpenGL handle for the Vertex Array
-    /// Returns: void
     pub fn build(self: *GlVertexArray) void {
-        // glGenVertexArrays(GLsizei size, GLuint* array)
         c.glGenVertexArrays(1, &self.handle);
     }
 
     /// Frees the OpenGL generated handle
-    /// Returns: void
     pub fn free(self: *GlVertexArray) void {
-        //glDeleteBuffer(GLsizei count, GLuint array))
         c.glDeleteVertexArrays(1, &self.handle);
     }
 
     /// Binds the Vertex Array
-    /// Returns: void
     pub fn bind(self: *GlVertexArray) void {
-        // glBindVertexArray(GLuint array)
         c.glBindVertexArray(self.handle);
     }
 };
 
 /// Allocates an Vertex Array and sets it up
-/// Return: anyerror!GlVertexArray
-/// allocator: *std.mem.Allocator - Allocator used to create the GlVertexArray
 /// Comments: The caller will own the returned pointer.
 fn buildGlVertexArray(allocator: *std.mem.Allocator) anyerror!*GlVertexArray {
     var vao = try allocator.create(GlVertexArray);
@@ -463,24 +431,17 @@ const GlShader = struct {
     shader_type: GlShaderType,
 
     /// Builds the shader of the requested shader type
-    /// Returns: void
-    /// shader_type: GlShaderType - The type of shader to be built
     pub fn build(self: *GlShader, shader_type: GlShaderType) void {
-        // glCreateShader(GLenum shaderType)
         self.handle = c.glCreateShader(@enumToInt(shader_type));
         self.shader_type = shader_type;
     }
 
     /// Frees the stored shader handle
-    /// Returns: void
     pub fn free(self: *GlShader) void {
-        //glDeleteShader(GLuint shader)
         c.glDeleteShader(self.handle);
     }
 
     /// Sources a given GLSL shader file
-    /// Returns: anyerror!void
-    /// filename: [:0]const u8 - The filename of the source GLSL file
     pub fn source(self: *GlShader, filename: [:0]const u8) anyerror!void {
         // Open the shader directory
         var dir = try std.fs.cwd().openDir(
@@ -506,25 +467,20 @@ const GlShader = struct {
         const source_slice = file_buffer[0..source_bytes];
         const source_size = source_slice.len;
 
-        //glShaderSource(GLuint shader, GLsizei count, const GLchar** string, const GLint *length)
         c.glShaderSource(self.handle, 1, &source_slice.ptr, @ptrCast(*const c_int, &source_size));
     }
 
     /// Compiles the previously sources GLSL shader file, and checks for any compilation errors.
-    /// Returns: anyerror!void
     pub fn compile(self: *GlShader) anyerror!void {
         var no_errors: c_int = undefined;
         var compilation_log: [512]u8 = undefined;
 
-        //glCompileShader(GLuint shader)
         c.glCompileShader(self.handle);
 
-        //glGetShaderiv(GLuint shader, GLenum pname, GLint *params)
         c.glGetShaderiv(self.handle, c.GL_COMPILE_STATUS, &no_errors);
 
         // If the compilation failed, log the message
         if (no_errors == 0) {
-            //glGetShaderInfoLog(GLuint shader, GLsizei maxLength, GLsizei *length, GLchar *infoLog)
             c.glGetShaderInfoLog(self.handle, 512, null, &compilation_log);
             std.log.err("[Renderer][OpenGL]: Failed to compile {s} shader: \n{s}", .{ self.shader_type, compilation_log });
             return OpenGlError.ShaderCompilationFailure;
@@ -533,9 +489,6 @@ const GlShader = struct {
 };
 
 /// Allocates an GlShader and sets it up
-/// Return: anyerror!GlShader
-/// allocator: *std.mem.Allocator - Allocator used to create the GlShader
-/// shader_type: GlShaderType - The type of shader to be built
 /// Comments: The caller will own the returned pointer.
 fn buildGlShader(allocator: *std.mem.Allocator, shader_type: GlShaderType) anyerror!*GlShader {
     var shader = try allocator.create(GlShader);
@@ -557,41 +510,31 @@ const GlShaderProgram = struct {
     const Self = @This();
 
     /// Builds the shader program
-    /// Returns: void
     pub fn build(self: *Self) void {
-        // glCreateProgram()
         self.handle = c.glCreateProgram();
     }
 
     /// Frees the OpenGL reference
     pub fn free(self: *Self) void {
-        //glDeleteProgram(GLuint program)
         c.glDeleteProgram(self.handle);
     }
 
     /// Attaches the requested shader to be used for rendering
-    /// Returns: void
-    /// shader: *GlShader - A pointer to the requested shader
     pub fn attach(self: *Self, shader: *GlShader) void {
-        //glAttachShaer(GLuint program, GLuint shader)
         c.glAttachShader(self.handle, shader.*.handle);
     }
 
     /// Links the shader program and checks for any errors
-    /// Returns: anyerror!void
     pub fn link(self: *Self) anyerror!void {
         var no_errors: c_int = undefined;
         var linking_log: [512]u8 = undefined;
 
-        //glLinkProgram(GLuint program)
         c.glLinkProgram(self.handle);
 
-        //glGetShaderiv(GLuint shader, GLenum pname, GLint *params)
         c.glGetProgramiv(self.handle, c.GL_LINK_STATUS, &no_errors);
 
         // If the linking failed, log the message
         if (no_errors == 0) {
-            //glGetProgramInfoLog(GLuint shader, GLsizei maxLength, GLsizei *length, GLchar *infoLog)
             c.glGetProgramInfoLog(self.handle, 512, null, &linking_log);
             std.log.err("[Renderer][OpenGL]: Failed to link shader program: \n{s}", .{linking_log});
             return OpenGlError.ShaderLinkingFailure;
@@ -599,48 +542,35 @@ const GlShaderProgram = struct {
     }
 
     /// Tells OpenGL to make this the active pipeline
-    /// Returns: void
     pub fn use(self: *Self) void {
-        // glUseProgram(GLuint)
         c.glUseProgram(self.handle);
     }
 
     /// Sets a uniform boolean of `name` to the requested `value`
-    /// Returns: void
-    /// name: [:0]const u8 - The name of the uniform
-    /// value: bool - The value to set the uniform to
     pub fn setBool(self: *Self, name: [:0]const u8, value: bool) void {
-        const uniform_location = c.glUniformLocation(self.handle, &name.ptr);
+        const uniform_location = c.glGetUniformLocation(self.handle, &name.ptr);
         const int_value: c_int = @as(c_int, value);
-        // glUniform1i(GLint location, GLint)
         c.glUniform1i(uniform_location, int_value);
     }
 
     /// Sets a uniform integer of `name` to the requested `value`
-    /// Returns: void
-    /// name: [:0]const u8 - The name of the uniform
-    /// value: i32 - The value to set the uniform to
     pub fn setInt(self: *Self, name: [:0]const u8, value: i32) void {
-        const uniform_location = c.glUniformLocation(self.handle, &name.ptr);
+        const uniform_location = c.glGetUniformLocation(self.handle, &name.ptr);
         const int_value: c_int = @as(c_int, value);
-        // glUniform1i(GLint location, GLint)
         c.glUniform1i(uniform_location, int_value);
     }
 
     /// Sets a uniform float of `name` to the requested `value`
-    /// Returns: void
-    /// name: [:0]const u8 - The name of the uniform
-    /// value: f32 - The value to set the uniform to
     pub fn setFloat(self: *Self, name: [:0]const u8, value: f32) void {
-        const uniform_location = c.glUniformLocation(self.handle, &name.ptr);
-        // glUniform1f(GLint location, GLfloat)
+        const uniform_location = c.glGetUniformLocation(self.handle, &name.ptr);
         c.glUniform1f(uniform_location, value);
     }
+
+    /// Sets a uniform mat4 of `name` to the requested `value`
+    // pub fn setMatrix4()
 };
 
 /// Allocates an GlShaderProgram and sets it up
-/// Return: anyerror!GlShaderProgram
-/// allocator: *std.mem.Allocator - Allocator used to create the GlShaderProgram
 /// Comments: The caller will own the returned pointer.
 fn buildGlShaderProgram(allocator: *std.mem.Allocator) anyerror!*GlShaderProgram {
     var sp = try allocator.create(GlShaderProgram);

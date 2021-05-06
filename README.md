@@ -3,7 +3,10 @@ _**dross-zig**_ is a bare bones game framework written in :zap:[Zig](https://git
 
 ## Dependencies
 ---
-_**dross-zig**_ uses a handful of C/C++ libraries:
+**Zig**:
+- [zalgebra](https://github.com/kooparse/zalgebra)
+
+**C/C++ libraries**:
 - GLFW (Window and input)
 - OpenGL (Graphics API)
 - GLAD (OpenGL helper)

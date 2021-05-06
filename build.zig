@@ -28,6 +28,11 @@ pub fn build(b: *std.build.Builder) void {
     exe.linkSystemLibrary("glfw3");
     exe.linkSystemLibrary("opengl32");
 
+    exe.addPackage(.{
+        .name = "zalgebra",
+        .path = "libs/zalgebra/src/main.zig",
+    });
+
     exe.linkLibC();
 
     exe.install();
