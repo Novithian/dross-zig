@@ -1,8 +1,10 @@
 // Third-Party
 const c = @import("../c_global.zig").c_imp;
 const std = @import("std");
+const Vec2 = @import("zalgebra").vec2;
 // dross-rs
 const gfx = @import("../renderer/renderer.zig");
+const cam = @import("../renderer/cameras/camera_2d.zig");
 
 /// User defined update/tick function
 pub extern fn update(delta: f64) void;
@@ -18,6 +20,8 @@ pub const ApplicationError = error{
 /// TODO(devon): Remove when shipping
 pub var debug_mode = false;
 pub var pause = false;
+
+pub var window_size: Vec2 = undefined;
 
 // -----------------------------------------
 //      - Application -
@@ -36,12 +40,12 @@ pub const Application = struct {
     pub fn run(self: *Application) void {
         while (c.glfwWindowShouldClose(self.window) == 0) {
             // Calculate timestep
-            const current_time = c.glfwGetTime(); 
+            const current_time = c.glfwGetTime();
             var delta = current_time - self.previous_frame_time;
             self.previous_frame_time = current_time;
 
             // TODO(devon): Remove when shipping
-            if(debug_mode and pause) delta = 0;
+            if (debug_mode and pause) delta = 0;
 
             // Process input
             self.processInput();
@@ -73,6 +77,12 @@ pub const Application = struct {
         // Window Creation
         self.window = c.glfwCreateWindow(width, height, title, null, null) orelse return ApplicationError.WindowCreation;
 
+        // Set the global variables
+        window_size = Vec2.new(
+            @intToFloat(f32, width),
+            @intToFloat(f32, height),
+        );
+
         // Make our window the current context
         c.glfwMakeContextCurrent(self.window);
 
@@ -86,6 +96,9 @@ pub const Application = struct {
 
         // Resize the application's viewport to match that of the window
         // app.resize(0, 0, width, height);
+
+        // Make sure there is at least a single Camera instance
+        try cam.buildCamera2d(allocator);
     }
 
     /// Gracefully terminates the Application by cleaning up
@@ -99,6 +112,7 @@ pub const Application = struct {
         c.glfwTerminate();
 
         // Manually allocated memory cleanup
+        cam.freeAllCamera2d(self.allocator.?);
         if (self.renderer != null) self.renderer.?.free(self.allocator.?);
         self.allocator.?.destroy(self.renderer.?);
     }
@@ -108,18 +122,18 @@ pub const Application = struct {
         // TODO(devon): Remove when shipping
         if (c.glfwGetKey(self.window, c.GLFW_KEY_ESCAPE) == c.GLFW_PRESS) c.glfwSetWindowShouldClose(self.window, c.GL_TRUE);
         if (c.glfwGetKey(self.window, c.GLFW_KEY_F1) == c.GLFW_PRESS) {
-            if(debug_mode){
+            if (debug_mode) {
                 debug_mode = false;
-                pause = false;               
+                pause = false;
                 self.setWindowTitle("Dross-Zig Application");
-            }else {
+            } else {
                 debug_mode = true;
                 self.setWindowTitle("[DEBUG] Dross-Zig Application");
-            } 
+            }
         }
-        if(c.glfwGetKey(self.window, c.GLFW_KEY_P) == c.GLFW_PRESS) {
-            if(debug_mode) {
-                if(pause) {
+        if (c.glfwGetKey(self.window, c.GLFW_KEY_P) == c.GLFW_PRESS) {
+            if (debug_mode) {
+                if (pause) {
                     pause = false;
                     self.setWindowTitle("[DEBUG] Dross-Zig Application");
                 } else {
@@ -129,7 +143,7 @@ pub const Application = struct {
             }
         }
     }
-   
+
     /// Resize the application
     pub fn resize(self: *Application, x: c_int, y: c_int, width: c_int, height: c_int) void {
         // Call renderer's resize method

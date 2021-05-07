@@ -1,9 +1,12 @@
 ## **TODO** ##
 --------------
-- 
+- Camera movements
 
 ## **LOG** ##
 -------------
+- **[05-07-2021]**
+    - Implement basic Camera
+    - Updated camera_2d.zig's documentation
 - **[05-06-2021]**
     - Added zalgebra as an dependency for linear algebra
     - Implmented a basic delta time

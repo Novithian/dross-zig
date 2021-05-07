@@ -1,5 +1,5 @@
 const std = @import("std");
-const dross_app = @import("core/application.zig");
+const Dross = @import("dross_zig.zig");
 
 // List of things the user will have to define:
 //  - Create a allocator
@@ -25,7 +25,7 @@ const APP_TITLE = "Dross-Zig Application";
 const APP_WIDTH = 1280;
 const APP_HEIGHT = 720;
 
-var app: *dross_app.Application = undefined;
+var app: *Dross.Application = undefined;
 
 pub fn main() anyerror!u8 {
 
@@ -38,7 +38,7 @@ pub fn main() anyerror!u8 {
     }
 
     // Create the application
-    app = try dross_app.buildApplication(
+    app = try Dross.buildApplication(
         &gpa.allocator,
         APP_TITLE,
         APP_WIDTH,

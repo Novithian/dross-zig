@@ -35,6 +35,8 @@ pub fn build(b: *std.build.Builder) void {
 
     exe.linkLibC();
 
+    // exe.subsystem = std.Target.SubSystem.Windows;
+
     exe.install();
 
     const run_cmd = exe.run();

@@ -8,6 +8,7 @@ const Mat4 = za.mat4;
 // dross-zig
 const Color = @import("../../core/core.zig").Color;
 const texture = @import("../texture.zig");
+const Camera = @import("../cameras/camera_2d.zig");
 
 // Testing vertices and indices
 // zig fmt: off
@@ -192,6 +193,12 @@ pub const OpenGlBackend = struct {
         // TODO(devon): remove 
         // For debug purposes only
         self.debug_texture = try texture.buildTexture(allocator);
+
+        // const scale_mat = Mat4.from_scale(Vec3.new(1.0, 2.0, 1.0));
+        // const rot_mat = Mat4.from_rotation(0.0, Vec3.new(0.0, 0.0, 1.0));
+        // const trans_mat = Mat4.from_translate(Vec3.new(0.0, 0.0, 0.0));
+        // const sr_mat = Mat4.mult(scale_mat, rot_mat);
+        // self.transform = Mat4.mult(sr_mat, trans_mat);
         self.transform = Mat4.identity();
 
     }
@@ -219,7 +226,9 @@ pub const OpenGlBackend = struct {
 
         // Debug transforms
         const rotation_speed: f64 = 100.0;
+        const move_speed: f32 = 0.6;
         self.transform = self.transform.?.rotate(@floatCast(f32, delta * rotation_speed), Vec3.new(0.0, 0.0, 1.0));
+        self.transform = self.transform.?.translate(Vec3.new(move_speed * @floatCast(f32, delta), 0.0, 0.0));
 
         // Clear the background with the specified color
         c.glClearColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
@@ -231,13 +240,36 @@ pub const OpenGlBackend = struct {
         // Tell OpenGL which shader program's pipeline we want to use
         self.shader_program.?.use();
 
-        const transformLocation: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "transform");
+        const model_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "model");
         c.glUniformMatrix4fv(
-            transformLocation,  // Location
+            model_location,  // Location
             1,                  // count
             c.GL_FALSE,         // transpose from column-major to row-major
             @ptrCast(*const f32, &self.transform.?)// data
         );
+
+        var current_camera: *Camera.Camera2d = Camera.getCurrentCamera().?;
+        // var projection_matrix = current_camera.projectionMatrix();
+        var projection_matrix = Mat4.identity();
+        const projection_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "projection");
+
+        c.glUniformMatrix4fv(
+            projection_location,  // Location
+            1,                  // count
+            c.GL_FALSE,         // transpose from column-major to row-major
+            @ptrCast(*const f32, &projection_matrix)// data
+        );
+
+        const view_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "view");
+        const view_matrix: Mat4 = Mat4.from_translate(Vec3.new(0.0, 0.0, 0.0));
+        c.glUniformMatrix4fv(
+            view_location,  // Location
+            1,                  // count
+            c.GL_FALSE,         // transpose from column-major to row-major
+            @ptrCast(*const f32, &view_matrix)// data
+        );
+
+        
 
         // Bind the VAO
         self.vertex_array.?.bind();
@@ -565,9 +597,6 @@ const GlShaderProgram = struct {
         const uniform_location = c.glGetUniformLocation(self.handle, &name.ptr);
         c.glUniform1f(uniform_location, value);
     }
-
-    /// Sets a uniform mat4 of `name` to the requested `value`
-    // pub fn setMatrix4()
 };
 
 /// Allocates an GlShaderProgram and sets it up

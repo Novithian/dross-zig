@@ -1,5 +1,4 @@
 ## **Conversions** ##
----
 | GL            | Zig       | Conversion Method |
 | :----         | :---:     | ----------------: |
 | GLuint* x     | y: c_uint  | @ptrCast(*c_uint, &y) |
@@ -10,8 +9,8 @@
 | GLsizeiptr x  | y: c_uint | @ptrCast(c_longlong, y) |
 | GLsizei x     | y: c_int | @intCast(c_longlong, y) |
 | const GLvoid* x | y: c_int | @intToPtr(*c_void, 0) |
+
 ## **OpenGL Function Signatures** ##
----
 ```cpp
 // General
 glViewport(GLint x, GLint y, GLsizei width, GLsizei height)

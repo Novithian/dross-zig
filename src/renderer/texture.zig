@@ -32,17 +32,13 @@ pub const Texture = struct {
 
     /// Deallocates any owned memory that was required for operation
     pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
-        switch(selected_api) {
+        switch (selected_api) {
             renderer.BackendApi.OpenGl => {
                 self.gl_texture.?.free(allocator);
                 allocator.destroy(self.gl_texture.?);
             },
-            renderer.BackendApi.Dx12 => {
-
-            },
-            renderer.BackendApi.Vulkan => {
-
-            },
+            renderer.BackendApi.Dx12 => {},
+            renderer.BackendApi.Vulkan => {},
         }
     }
 

@@ -1,11 +1,22 @@
 ## NOTES ##
------------
 - Currently working on OpenGL backend
 
 
 
 ## TERMINOLOGY ##
------------------
+### Coordinate System ###
+- **Coordinate Pipeline**:
+    1) Vertex coordinates start in **local space**.
+    2) Transform local coords to **world space** via the **model matrix**.
+    3) Transform the world coordinates to **view space** via the **view matrix**.
+    4) Transform the view coordinates to **clip space** via the **projection matrix**.
+    5) Transform the clip coordinates to **screen space** via the **viewport transform**.
+- **ModelViewProjection Matrix**:
+- **Local/Object Space**: s
+- **World Space**: s
+- **View/Eye Space**: s
+- **Clip Space**: s
+- **Screen Space**: s
 ### Graphics Programming ###
 - **Graphics Pipeline**: The process that handles transforming 3D coordinates to the 2D pixels rendered on your display.
 - **Shaders**: Small programs that run on the GPU and determine how pixels should be rendered.

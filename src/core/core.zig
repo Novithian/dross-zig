@@ -39,4 +39,3 @@ pub const Color = struct {
         return new_color;
     }
 };
-

@@ -50,14 +50,14 @@ pub const OpenGlTexture = struct {
         var compressed_bytes: []const u8 = @embedFile("../../../assets/sprites/s_guy_idle.png");
         const bytes_length: c_int = @intCast(c_int, compressed_bytes.len);
         // Determine if the file is a png file
-        if(c.stbi_info_from_memory(compressed_bytes.ptr, bytes_length, &self.width, &self.height, null) == 0){
+        if (c.stbi_info_from_memory(compressed_bytes.ptr, bytes_length, &self.width, &self.height, null) == 0) {
             return error.NotPngFile;
         }
 
         // Ensure that the image has pixel data
-        if(self.width <= 0 or self.height <= 0) return error.NoPixels;
+        if (self.width <= 0 or self.height <= 0) return error.NoPixels;
 
-        if(c.stbi_is_16_bit_from_memory(compressed_bytes.ptr, bytes_length) != 0) {
+        if (c.stbi_is_16_bit_from_memory(compressed_bytes.ptr, bytes_length) != 0) {
             return error.InvalidFormat;
         }
 
@@ -71,16 +71,15 @@ pub const OpenGlTexture = struct {
 
         const image_data = c.stbi_load_from_memory(compressed_bytes.ptr, bytes_length, &self.width, &self.height, null, channel_count);
 
-        if(image_data == null) return error.NoMem;
+        if (image_data == null) return error.NoMem;
 
         const pitch = width * bits_per_channel * channel_count / 8;
-        self.data = image_data[0.. height * pitch];
+        self.data = image_data[0 .. height * pitch];
 
         c.glPixelStorei(c.GL_UNPACK_ALIGNMENT, 4);
 
         // Generate gl texture
 
-        
         c.glTexImage2D(
             c.GL_TEXTURE_2D, // Texture Target
             mipmap_level, // mipmap detail level
@@ -104,7 +103,7 @@ pub const OpenGlTexture = struct {
 
     /// Returns the OpenGL generated texture id
     pub fn id(self: *Self) c_uint {
-        if(self.id == 0) @panic("[Renderer][OpenGL]: Texture ID of 0 is NOT valid!");
+        if (self.id == 0) @panic("[Renderer][OpenGL]: Texture ID of 0 is NOT valid!");
         return self.id;
     }
 };
