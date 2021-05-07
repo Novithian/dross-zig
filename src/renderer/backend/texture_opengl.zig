@@ -76,8 +76,6 @@ pub const OpenGlTexture = struct {
         const pitch = width * bits_per_channel * channel_count / 8;
         self.data = image_data[0 .. height * pitch];
 
-        c.glPixelStorei(c.GL_UNPACK_ALIGNMENT, 4);
-
         // Generate gl texture
 
         c.glTexImage2D(

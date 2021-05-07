@@ -77,7 +77,12 @@ pub const OpenGlBackend = struct {
     /// Comments: INTERNAL use only. The OpenGlBackend will be the owner of the allocated memory.
     pub fn build(self: *OpenGlBackend, allocator: *std.mem.Allocator) anyerror!void {
 
+        // Sets the pixel storage mode that affefcts the operation
+        // of subsequent glReadPixel as well as unpacking texture patterns.
         c.glPixelStorei(c.GL_UNPACK_ALIGNMENT, 1);
+
+        // Enable depth testing
+        c.glEnable(c.GL_DEPTH_TEST);
 
         // Allocate and compile the vertex shader
         var vertex_shader: *GlShader = try buildGlShader(allocator, GlShaderType.Vertex);
@@ -194,13 +199,7 @@ pub const OpenGlBackend = struct {
         // For debug purposes only
         self.debug_texture = try texture.buildTexture(allocator);
 
-        // const scale_mat = Mat4.from_scale(Vec3.new(1.0, 2.0, 1.0));
-        // const rot_mat = Mat4.from_rotation(0.0, Vec3.new(0.0, 0.0, 1.0));
-        // const trans_mat = Mat4.from_translate(Vec3.new(0.0, 0.0, 0.0));
-        // const sr_mat = Mat4.mult(scale_mat, rot_mat);
-        // self.transform = Mat4.mult(sr_mat, trans_mat);
         self.transform = Mat4.identity();
-
     }
 
     /// Frees up any resources that was previously allocated
@@ -232,7 +231,7 @@ pub const OpenGlBackend = struct {
 
         // Clear the background with the specified color
         c.glClearColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
-        c.glClear(c.GL_COLOR_BUFFER_BIT);
+        c.glClear(c.GL_COLOR_BUFFER_BIT | c.GL_DEPTH_BUFFER_BIT);
  
         // Bind Texture
         c.glBindTexture(c.GL_TEXTURE_2D, self.debug_texture.?.getGlId());
@@ -268,8 +267,6 @@ pub const OpenGlBackend = struct {
             c.GL_FALSE,         // transpose from column-major to row-major
             @ptrCast(*const f32, &view_matrix)// data
         );
-
-        
 
         // Bind the VAO
         self.vertex_array.?.bind();
@@ -477,7 +474,8 @@ const GlShader = struct {
     pub fn source(self: *GlShader, filename: [:0]const u8) anyerror!void {
         // Open the shader directory
         var dir = try std.fs.cwd().openDir(
-            "src/renderer/shaders",
+            //"src/renderer/shaders",
+            "resources/shaders",
             .{},
         );
 

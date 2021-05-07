@@ -1,5 +1,6 @@
 ## **TODO** ##
 --------------
+- Moving any uses of matrices to transforms in camera/renderer
 - Camera movements
 
 ## **LOG** ##
@@ -7,6 +8,7 @@
 - **[05-07-2021]**
     - Implement basic Camera
     - Updated camera_2d.zig's documentation
+	- Create abstraction over zalgebra's mat4 via transform.zig 
 - **[05-06-2021]**
     - Added zalgebra as an dependency for linear algebra
     - Implmented a basic delta time

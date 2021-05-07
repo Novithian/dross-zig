@@ -51,6 +51,8 @@
     - **Linear**: Also known as bilinear filtering. Interpolates the color values from the texture coordinates's neighboring texels.
 - **Magnifying and Minifying**: During these operations, different texture filtering can be used depending on the operation. Such as Nearest filtering for minifying operations, and Linear for magnifying operations.
 - **Mipmaps**: A collection of texture images where each subdequent texture is twice as small compared to the previous one.
+- **Depth Buffer**: Where depth information is stored.
+- **Depth Testing**: The process of determining of a fragment is behind another fragment, if so then the fragment is discarded as it would not be seen anyways.
 
 ### OpenGL ###
 - OpenGL allows for binding several buffers at once, as long as they have a different buffer type.

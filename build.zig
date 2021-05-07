@@ -33,6 +33,11 @@ pub fn build(b: *std.build.Builder) void {
         .path = "libs/zalgebra/src/main.zig",
     });
 
+    // Copy over the resource code
+    b.installBinFile("src/renderer/shaders/default_shader.vs", "resources/shaders/default_shader.vs");
+    b.installBinFile("src/renderer/shaders/default_shader.fs", "resources/shaders/default_shader.fs");
+    b.installBinFile("assets/sprites/s_guy_idle.png", "resources/sprites/s_guy_idle.png");
+
     exe.linkLibC();
 
     // exe.subsystem = std.Target.SubSystem.Windows;

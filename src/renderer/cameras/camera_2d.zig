@@ -6,6 +6,7 @@ const Vec3 = za.vec3;
 const Mat4 = za.mat4;
 // dross-zig
 const app = @import("../../core/application.zig");
+const Transform = @import("../../core/transform.zig").Transform;
 
 // How many cameras are instantiated in the scene
 var camera_count: u8 = 0;
@@ -44,6 +45,7 @@ pub const Camera2d = struct {
     far: f32 = 0.0,
     /// Is this camera the currently active one
     current: bool = false,
+    transform: Transform,
 
     const Self = @This();
 
@@ -53,6 +55,8 @@ pub const Camera2d = struct {
         self.zoom = 1.0;
         self.near = 0.01;
         self.far = 100.0;
+
+        self.transform = Transform.identity();
     }
 
     /// Ensures to reduce the camera cound and removes the camera from the cameras list
@@ -85,6 +89,11 @@ pub const Camera2d = struct {
     /// Sets the zoom level to the desired `zoom`
     pub fn setZoom(self: *Self, zoom: f32) void {
         self.zoom = zoom;
+    }
+
+    /// Returns the camera's transform
+    pub fn getTransform(self: *Self) Transform {
+        return self.transform;
     }
 };
 
