@@ -1,12 +1,10 @@
 // Third Parties
 const c = @import("../../c_global.zig").c_imp;
 const std = @import("std");
-const za = @import("zalgebra");
-const Vec3 = za.vec3;
-const Mat4 = za.mat4;
 // dross-zig
 const app = @import("../../core/application.zig");
-const Transform = @import("../../core/transform.zig").Transform;
+const Matrix4 = @import("../../core/matrix4.zig").Matrix4;
+const Vector3 = @import("../../core/vector3.zig").Vector3;
 
 // How many cameras are instantiated in the scene
 var camera_count: u8 = 0;
@@ -36,7 +34,7 @@ pub const Camera2d = struct {
     /// Unique Camera ID
     id: u16,
     /// The target position the camera should be focusing on
-    target_position: Vec3,
+    target_position: Vector3,
     /// Level of zoom
     zoom: f32 = 1.0,
     /// Determines how close something can be before getting clipped
@@ -45,18 +43,18 @@ pub const Camera2d = struct {
     far: f32 = 0.0,
     /// Is this camera the currently active one
     current: bool = false,
-    transform: Transform,
+    transform: Matrix4,
 
     const Self = @This();
 
     /// Setups the camera
     pub fn build(self: *Self) void {
-        self.target_position = Vec3.new(0.0, 0.0, 0.0);
+        self.target_position = Vector3.new(0.0, 0.0, 0.0);
         self.zoom = 1.0;
         self.near = 0.01;
         self.far = 100.0;
 
-        self.transform = Transform.identity();
+        self.transform = Matrix4.identity();
     }
 
     /// Ensures to reduce the camera cound and removes the camera from the cameras list
@@ -64,25 +62,8 @@ pub const Camera2d = struct {
         camera_count -= 1;
     }
 
-    /// Returns the projection matrix
-    pub fn projectionMatrix(self: *Self) Mat4 {
-        // const left = self.target_position.x - app.window_size.x / 2.0;
-        // const right = self.target_position.x + app.window_size.x / 2.0;
-        // const top = self.target_position.y - app.window_size.y / 2.0;
-        // const bottom = self.target_position.y + app.window_size.y / 2.0;
-        const left = self.target_position.x;
-        const right = self.target_position.x + app.window_size.x;
-        const top = self.target_position.y;
-        const bottom = self.target_position.y + app.window_size.y;
-
-        var orthographic_matrix: Mat4 = Mat4.orthographic(left, right, bottom, top, self.near, self.far);
-        var zoom_matrix: Mat4 = Mat4.from_scale(Vec3.new(self.zoom, self.zoom, self.zoom));
-
-        return Mat4.mult(orthographic_matrix, zoom_matrix);
-    }
-
     /// Sets the new target position to the desired `position`
-    pub fn setTargetPosition(self: *Self, position: Vec3) void {
+    pub fn setTargetPosition(self: *Self, position: Vector3) void {
         self.target_position = position;
     }
 
@@ -92,7 +73,7 @@ pub const Camera2d = struct {
     }
 
     /// Returns the camera's transform
-    pub fn getTransform(self: *Self) Transform {
+    pub fn getTransform(self: *Self) Matrix4 {
         return self.transform;
     }
 };

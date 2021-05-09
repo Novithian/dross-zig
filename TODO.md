@@ -1,10 +1,21 @@
 ## **TODO** ##
 --------------
-- Moving any uses of matrices to transforms in camera/renderer
+- Wrapper for zalgebra vec4
+- Create the test texture and transform in the main file
 - Camera movements
+- Camera zoom
 
 ## **LOG** ##
 -------------
+- **[05-09-2021]**
+	- Implement a Render API to allow for the end user to draw. Rendere will handle pre-draw, and post-draw. Something simple like DrawQuad.
+	- Implement a wrapper around zalgebra's vec3 and vec2
+	- Replace all instances of using zalgebra's Vectors and move them over to wrapper Vectors.
+	- Moving any uses of za's matrices to dross's wrapper matrix in camera/renderer
+- **[05-08-2021]**
+	- Figure out a way to handle lifetime events.
+	- Add a render event for the user to implement
+	- Wrapper for zalgebra Matrix4
 - **[05-07-2021]**
     - Implement basic Camera
     - Updated camera_2d.zig's documentation

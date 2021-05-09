@@ -1,13 +1,18 @@
 // Third-Party
 const c = @import("../c_global.zig").c_imp;
 const std = @import("std");
-const Vec2 = @import("zalgebra").vec2;
 // dross-rs
 const gfx = @import("../renderer/renderer.zig");
 const cam = @import("../renderer/cameras/camera_2d.zig");
+const EventLoop = @import("event_loop.zig");
+const Vector2 = @import("../core/vector2.zig").Vector2;
+// ----------------------------------------------------
 
 /// User defined update/tick function
-pub extern fn update(delta: f64) void;
+//pub extern fn update(delta: f64) void;
+
+/// User defined render function
+//pub extern fn render() void;
 
 /// Error Set for Application-related Errors
 pub const ApplicationError = error{
@@ -21,7 +26,7 @@ pub const ApplicationError = error{
 pub var debug_mode = false;
 pub var pause = false;
 
-pub var window_size: Vec2 = undefined;
+pub var window_size: Vector2 = undefined;
 
 // -----------------------------------------
 //      - Application -
@@ -31,7 +36,6 @@ pub var window_size: Vec2 = undefined;
 /// Most of the communication from the end-user will come
 /// through the application instance.
 pub const Application = struct {
-    renderer: ?*gfx.Renderer = undefined,
     window: *c.GLFWwindow = undefined,
     allocator: ?*std.mem.Allocator = undefined,
     previous_frame_time: f64 = 0,
@@ -51,10 +55,10 @@ pub const Application = struct {
             self.processInput();
 
             // Update
-            update(delta);
+            EventLoop.updateInternal(delta);
 
             // Render
-            self.renderer.?.render(delta);
+            gfx.Renderer.render();
 
             // Submit
             c.glfwSwapBuffers(self.window);
@@ -78,7 +82,7 @@ pub const Application = struct {
         self.window = c.glfwCreateWindow(width, height, title, null, null) orelse return ApplicationError.WindowCreation;
 
         // Set the global variables
-        window_size = Vec2.new(
+        window_size = Vector2.new(
             @intToFloat(f32, width),
             @intToFloat(f32, height),
         );
@@ -87,7 +91,7 @@ pub const Application = struct {
         c.glfwMakeContextCurrent(self.window);
 
         // Build the Renderer
-        self.renderer = try gfx.buildRenderer(allocator);
+        try gfx.buildRenderer(allocator);
 
         // Remember to set the app's allocator to the passed allocator
         self.allocator = allocator;
@@ -113,8 +117,7 @@ pub const Application = struct {
 
         // Manually allocated memory cleanup
         cam.freeAllCamera2d(self.allocator.?);
-        if (self.renderer != null) self.renderer.?.free(self.allocator.?);
-        self.allocator.?.destroy(self.renderer.?);
+        try gfx.freeRenderer(self.allocator.?);
     }
 
     /// Process the application input
@@ -147,7 +150,7 @@ pub const Application = struct {
     /// Resize the application
     pub fn resize(self: *Application, x: c_int, y: c_int, width: c_int, height: c_int) void {
         // Call renderer's resize method
-        self.renderer.?.resizeViewport(x, y, width, height);
+        gfx.renderer.?.resizeViewport(x, y, width, height);
     }
 
     /// Sets the application's window title

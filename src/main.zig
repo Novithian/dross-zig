@@ -1,6 +1,6 @@
 const std = @import("std");
 const Dross = @import("dross_zig.zig");
-
+usingnamespace Dross;
 // List of things the user will have to define:
 //  - Create a allocator
 //      var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -20,12 +20,15 @@ const Dross = @import("dross_zig.zig");
 //  - Define an update function
 //      pub export fn update(delta: f64) void;
 
-// Comptime
+// Application Infomation
 const APP_TITLE = "Dross-Zig Application";
 const APP_WIDTH = 1280;
 const APP_HEIGHT = 720;
 
-var app: *Dross.Application = undefined;
+//
+var app: *Application = undefined;
+
+var quad_position: Vector3 = undefined;
 
 pub fn main() anyerror!u8 {
 
@@ -38,7 +41,7 @@ pub fn main() anyerror!u8 {
     }
 
     // Create the application
-    app = try Dross.buildApplication(
+    app = try buildApplication(
         &gpa.allocator,
         APP_TITLE,
         APP_WIDTH,
@@ -54,11 +57,19 @@ pub fn main() anyerror!u8 {
     // proper clean-up.
     defer app.*.free();
 
+    // Setup
+    quad_position = Vector3.zero();
+
     // Begin the game loop
     app.*.run();
 
     return 0;
 }
+// Defined what game-level tick/update logic you want to control in the game.
+pub export fn update(delta: f64) void {
+    quad_position = quad_position.add(Vector3.new(1 * @floatCast(f32, delta), 0.0, 0.0));
+}
 
-/// Defined what game-level tick/update logic you want to control in the game.
-pub export fn update(delta: f64) void {}
+pub export fn render() void {
+    Renderer.drawQuad(quad_position);
+}

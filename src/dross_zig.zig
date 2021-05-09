@@ -1,5 +1,9 @@
-usingnamespace @import("core/application.zig");
-usingnamespace @import("core/transform.zig");
-usingnamespace @import("core/core.zig");
-usingnamespace @import("renderer/texture.zig");
-usingnamespace @import("renderer/cameras/camera_2d.zig");
+pub usingnamespace @import("core/application.zig");
+pub usingnamespace @import("core/event_loop.zig");
+pub usingnamespace @import("core/matrix4.zig");
+pub usingnamespace @import("core/vector2.zig");
+pub usingnamespace @import("core/vector3.zig");
+pub usingnamespace @import("core/core.zig");
+pub usingnamespace @import("renderer/texture.zig");
+pub usingnamespace @import("renderer/renderer.zig");
+pub usingnamespace @import("renderer/cameras/camera_2d.zig");

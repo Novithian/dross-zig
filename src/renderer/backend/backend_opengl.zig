@@ -2,13 +2,13 @@
 const c = @import("../../c_global.zig").c_imp;
 const std = @import("std");
 const za = @import("zalgebra");
-const Vec3 = za.vec3;
-const Mat4 = za.mat4;
 
 // dross-zig
 const Color = @import("../../core/core.zig").Color;
 const texture = @import("../texture.zig");
 const Camera = @import("../cameras/camera_2d.zig");
+const Matrix4 = @import("../../core/matrix4.zig").Matrix4;
+const Vector3 = @import("../../core/vector3.zig").Vector3;
 
 // Testing vertices and indices
 // zig fmt: off
@@ -69,13 +69,17 @@ pub const OpenGlBackend = struct {
     vertex_buffer: ?*GlVertexBuffer,
     index_buffer: ?*GlIndexBuffer,
 
+    clear_color: Color,
+
     debug_texture: ?*texture.Texture,
 
-    transform: ?Mat4,
+    projection_view: ?Matrix4,
+
+    const Self = @This();
 
     /// Builds the necessary components for the OpenGL renderer
     /// Comments: INTERNAL use only. The OpenGlBackend will be the owner of the allocated memory.
-    pub fn build(self: *OpenGlBackend, allocator: *std.mem.Allocator) anyerror!void {
+    pub fn build(self: *Self, allocator: *std.mem.Allocator) anyerror!void {
 
         // Sets the pixel storage mode that affefcts the operation
         // of subsequent glReadPixel as well as unpacking texture patterns.
@@ -195,15 +199,17 @@ pub const OpenGlBackend = struct {
         c.glBindVertexArray(index_zero);
 
 
+        // Set the clear color
+        self.clear_color = Color.rgb(0.2, 0.2, 0.2);
+
         // TODO(devon): remove 
         // For debug purposes only
         self.debug_texture = try texture.buildTexture(allocator);
 
-        self.transform = Mat4.identity();
     }
 
     /// Frees up any resources that was previously allocated
-    pub fn free(self: *OpenGlBackend, allocator: *std.mem.Allocator) void {
+    pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
         // Allow for OpenGL object to de-allocate any memory it needed
         self.debug_texture.?.free(allocator);
         self.vertex_array.?.free();
@@ -218,59 +224,53 @@ pub const OpenGlBackend = struct {
         allocator.destroy(self.index_buffer.?);
         allocator.destroy(self.shader_program.?);
     }
+    
+    /// Setups up the OpenGL specific components for rendering
+    pub fn beginRender(self: *Self, camera: *Camera.Camera2d) void {
+        // Clear the background color
+        self.clear();
 
-    /// Handles the OpenGL specific functionality
-    /// Comments: INTERNAL use only.
-    pub fn render(self: *OpenGlBackend, delta: f64, clear_color: Color) void {
-
-        // Debug transforms
-        const rotation_speed: f64 = 100.0;
-        const move_speed: f32 = 0.6;
-        self.transform = self.transform.?.rotate(@floatCast(f32, delta * rotation_speed), Vec3.new(0.0, 0.0, 1.0));
-        self.transform = self.transform.?.translate(Vec3.new(move_speed * @floatCast(f32, delta), 0.0, 0.0));
-
-        // Clear the background with the specified color
-        c.glClearColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
-        c.glClear(c.GL_COLOR_BUFFER_BIT | c.GL_DEPTH_BUFFER_BIT);
- 
-        // Bind Texture
-        c.glBindTexture(c.GL_TEXTURE_2D, self.debug_texture.?.getGlId());
-        
-        // Tell OpenGL which shader program's pipeline we want to use
+         // Tell OpenGL which shader program's pipeline we want to use
         self.shader_program.?.use();
 
+        // Set up projection_view matrix
+        self.projection_view = Matrix4.identity();
+        // NOTE(devon): In Orthographic mode, the projection will be just an identity matrix.
+        // Making the projection_view matrix nothing more than a simple translation matrix.
+        const projection_view_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "projection_view");
+
+        c.glUniformMatrix4fv(
+            projection_view_location,  // Location
+            1,                  // count
+            c.GL_FALSE,         // transpose from column-major to row-major
+            @ptrCast(*const f32, &self.projection_view)// data
+        );
+    }
+        
+
+    pub fn drawQuad(self: *Self, position: Vector3) void {
+         // Bind Texture
+        c.glBindTexture(c.GL_TEXTURE_2D, self.debug_texture.?.getGlId());
+        // Translation * Rotation * Scale
+        const transform = Matrix4.fromTranslate(position);
+        
         const model_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "model");
         c.glUniformMatrix4fv(
             model_location,  // Location
             1,                  // count
             c.GL_FALSE,         // transpose from column-major to row-major
-            @ptrCast(*const f32, &self.transform.?)// data
-        );
-
-        var current_camera: *Camera.Camera2d = Camera.getCurrentCamera().?;
-        // var projection_matrix = current_camera.projectionMatrix();
-        var projection_matrix = Mat4.identity();
-        const projection_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "projection");
-
-        c.glUniformMatrix4fv(
-            projection_location,  // Location
-            1,                  // count
-            c.GL_FALSE,         // transpose from column-major to row-major
-            @ptrCast(*const f32, &projection_matrix)// data
-        );
-
-        const view_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "view");
-        const view_matrix: Mat4 = Mat4.from_translate(Vec3.new(0.0, 0.0, 0.0));
-        c.glUniformMatrix4fv(
-            view_location,  // Location
-            1,                  // count
-            c.GL_FALSE,         // transpose from column-major to row-major
-            @ptrCast(*const f32, &view_matrix)// data
+            @ptrCast(*const f32, &transform.data)// data
         );
 
         // Bind the VAO
         self.vertex_array.?.bind();
+        
+        self.drawIndexed(self.vertex_array.?);
+    }
 
+
+    /// Draws geometry with a index buffer
+    pub fn drawIndexed(self: *Self, vertex_array: *GlVertexArray) void {
         const number_of_vertices: i32 = 6;
         const offset = @intToPtr(?*c_void, 0);
 
@@ -281,7 +281,14 @@ pub const OpenGlBackend = struct {
             c.GL_UNSIGNED_INT, // Type of values in indices
             offset, // Offset in a buffer or a pointer to the location where the indices are stored
         );
-    } // End of render
+    }
+    
+    
+    /// Clears the background with the set clear color
+    pub fn clear(self: *Self) void {
+        c.glClearColor(self.clear_color.r, self.clear_color.g, self.clear_color.b, self.clear_color.a);
+        c.glClear(c.GL_COLOR_BUFFER_BIT | c.GL_DEPTH_BUFFER_BIT);
+    }
 };
 
 /// Resizes the viewport to the given size and position 

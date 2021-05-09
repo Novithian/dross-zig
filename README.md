@@ -11,6 +11,14 @@ _**dross-zig**_ is a bare bones game framework written in :zap:[Zig](https://git
 - GLAD (OpenGL helper)
 - stb_image (Industry tested image loader)
 
+## Feature TODOs
+[ ] - Sprite Batching
+[ ] - Input Wrapper
+[ ] - Asset Management
+[ ] - Basic ECS System
+[ ] - Audio System
+
+
 ## **Disclaimer** 
 I do **_not_** recommend using this framework as its existence has been purely for educational purposes. The code that you see is poorly optimized and completely novice. 
 
