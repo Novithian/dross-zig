@@ -3,6 +3,7 @@ const std = @import("std");
 const c = @import("../c_global.zig").c_imp;
 // dross-zig
 const Application = @import("application.zig").Application;
+const Vector2 = @import("vector2.zig").Vector2;
 // ---------------------------------------------------------
 
 // -----------------------------------------
@@ -12,8 +13,8 @@ const Application = @import("application.zig").Application;
 pub const Input = struct {
     /// Returns true if the key in question is currently pressed.
     pub fn getKeyPressed(key: DrossKey) bool {
-        var state = c.glfwGetKey(Application.getWindow(), @enumToInt(key));
-        return state == c.GLFW_PRESS;
+        var state = key_map.get(key).?;
+        return state == DrossInputState.Pressed or state == DrossInputState.Down;
     }
 
     /// Returns the f32 value version of getKeyPressed
@@ -33,13 +34,74 @@ pub const Input = struct {
         return @intToFloat(f32, @boolToInt(key_released));
     }
 
+    /// Returns true if the key in question is registered has held 
+    /// down (takes a few frames to register).
+    pub fn getKeyDown(key: DrossKey) bool {
+        var state = key_map.get(key).?;
+        return state == DrossInputState.Down;
+    }
+
+    /// Returns the f32 value version of getKeyDown
+    pub fn getKeyDownValue(key: DrossKey) f32 {
+        const key_down = getKeyDown(key);
+        return @intToFloat(f32, @boolToInt(key_down));
+    }
+
+    /// Returns the Mouse's position as a Vector2
+    /// The position is in screen coordinates (relative to the left bounds)
+    /// and top bounds of the content area.
+    pub fn getMousePosition() Vector2 {
+        return mouse_position;
+    }
+
+    /// Returns if the mouse button has been pressed this frame
+    pub fn getMouseButtonPressed(button: DrossMouseButton) bool {
+        const state = mouse_button_map.get(button).?;
+        return state == DrossInputState.Pressed or state == DrossInputState.Down;
+    }
+
+    /// Returns if the mouse button has been held down for multiple frames
+    /// NOTE(devon): Currently does not work!
+    /// TODO(devon): Create a timer to find out if the button has 
+    /// be held down for multiple frames.
+    pub fn getMouseButtonDown(button: DrossMouseButton) bool {
+        const state = mouse_button_map.get(button).?;
+        return state == DrossInputState.Down;
+    }
+
+    /// Returns if the mouse button has been released this frame
+    pub fn getMouseButtonReleased(button: DrossMouseButton) bool {
+        return mouse_button_released_set.contains(button);
+    }
+
     /// Allocates and builds the required components for the Input system.
     /// Comments: Any allocated memory will be owned by the Input System.
     pub fn build(allocator: *std.mem.Allocator) !void {
+        // Connect the callbacks
         _ = c.glfwSetKeyCallback(Application.getWindow(), keyCallback);
+        _ = c.glfwSetCursorPosCallback(Application.getWindow(), mousePositionCallback);
+        _ = c.glfwSetMouseButtonCallback(Application.getWindow(), mouseButtonCallback);
+
+        // Initialize the mouse-related
+        mouse_position = Vector2.new(0.0, 0.0);
+        mouse_button_map = std.AutoHashMap(DrossMouseButton, DrossInputState).init(allocator);
+        mouse_button_released_set = std.AutoHashMap(DrossMouseButton, void).init(allocator);
+
+        // Initialize the key maps
         key_map = std.AutoHashMap(DrossKey, DrossInputState).init(allocator);
         key_released_set = std.AutoHashMap(DrossKey, void).init(allocator);
 
+        // Populate the mouse button map
+        try mouse_button_map.put(DrossMouseButton.MouseButtonLeft, DrossInputState.Neutral);
+        try mouse_button_map.put(DrossMouseButton.MouseButtonRight, DrossInputState.Neutral);
+        try mouse_button_map.put(DrossMouseButton.MouseButtonMiddle, DrossInputState.Neutral);
+        try mouse_button_map.put(DrossMouseButton.MouseButton4, DrossInputState.Neutral);
+        try mouse_button_map.put(DrossMouseButton.MouseButton5, DrossInputState.Neutral);
+        try mouse_button_map.put(DrossMouseButton.MouseButton6, DrossInputState.Neutral);
+        try mouse_button_map.put(DrossMouseButton.MouseButton7, DrossInputState.Neutral);
+        try mouse_button_map.put(DrossMouseButton.MouseButton8, DrossInputState.Neutral);
+
+        // Populate the keyboard map
         try key_map.put(DrossKey.KeyF1, DrossInputState.Neutral);
         try key_map.put(DrossKey.KeyF2, DrossInputState.Neutral);
         try key_map.put(DrossKey.KeyF3, DrossInputState.Neutral);
@@ -163,40 +225,20 @@ pub const Input = struct {
         try key_map.put(DrossKey.KeyMenu, DrossInputState.Neutral);
     }
 
+    /// Frees any allocated memory that was required for Input
     pub fn free(allocator: *std.mem.Allocator) void {
+        mouse_button_map.deinit();
+        mouse_button_released_set.deinit();
         key_map.deinit();
         key_released_set.deinit();
     }
 
-    /// Checks for any released keys from the previous frame, and resets them to neutral.
-    pub fn updateReleasedKeys() void {
-        if (key_released_set.count() == 0) return;
-
-        // Cycle through the released map
-        var iterator = key_released_set.iterator();
-        while (iterator.next()) |entry| {
-            const key = entry.key;
-            // Check if the state of the key has changed from released to pressed or down
-            const current_state = key_map.get(key).?;
-            // If it has not changed, then set it to neutral.
-            if (current_state == DrossInputState.Released) {
-                key_map.put(key, DrossInputState.Neutral) catch |err| {
-                    if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into key state map!");
-                };
-            }
-            // Otherwise, leave the state alone and just remove all keys at the end.
-            _ = key_released_set.remove(key);
-        }
+    /// Updates the cached input states
+    pub fn updateInput() void {
+        updateReleasedMouseButtons();
+        updateReleasedKeys();
     }
 };
-
-/// Holds the most recent key states
-var key_map: std.AutoHashMap(DrossKey, DrossInputState) = undefined;
-
-/// A HashSet that holds any keys that have recently been released. 
-/// Released only needs to be held for frame or so, and 
-/// then any keys stored will be set to neutral.
-var key_released_set: std.AutoHashMap(DrossKey, void) = undefined;
 
 /// The possible states of input
 const DrossInputState = enum(u8) {
@@ -209,6 +251,119 @@ const DrossInputState = enum(u8) {
     /// If the input was help for multiple frames
     Down = c.GLFW_REPEAT,
 };
+
+// --------------------------------------------------------
+//      - Mouse Specific -
+// --------------------------------------------------------
+
+/// Stores the mouse position in screen coordinates (relative to the bound 
+/// of the content area).
+var mouse_position: Vector2 = undefined;
+
+/// Holds the most recent mouse button states
+var mouse_button_map: std.AutoHashMap(DrossMouseButton, DrossInputState) = undefined;
+
+/// A HashSet that holds any mouse buttons that have recently 
+/// been released. Released only needs to be held for frame or so, and 
+/// then any mouse buttons stored will be set to neutral.
+var mouse_button_released_set: std.AutoHashMap(DrossMouseButton, void) = undefined;
+
+/// Wrapper for the numerical values representing the mouse buttons.
+pub const DrossMouseButton = enum(u8) {
+    MouseButtonLeft = 0,
+    MouseButtonRight = 1,
+    MouseButtonMiddle = 2,
+    MouseButton4 = 3,
+    MouseButton5 = 4,
+    MouseButton6 = 5,
+    MouseButton7 = 6,
+    MouseButton8 = 7,
+};
+
+/// Checks for any released mouse buttons from the previous frame, and resets them to neutral.
+fn updateReleasedMouseButtons() void {
+    if (mouse_button_released_set.count() == 0) return;
+
+    // Cycle through the released map
+    var iterator = mouse_button_released_set.iterator();
+    while (iterator.next()) |entry| {
+        const key = entry.key;
+        // Check if the state of the mouse button has changed from released to pressed or down
+        const current_state = mouse_button_map.get(key).?;
+        // If it has not changed, then set it to neutral.
+        if (current_state == DrossInputState.Released) {
+            mouse_button_map.put(key, DrossInputState.Neutral) catch |err| {
+                if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into mouse button state map!");
+            };
+        }
+        // Otherwise, leave the state alone and just remove all keys at the end.
+        _ = mouse_button_released_set.remove(key);
+    }
+}
+
+/// The mouse position callback for GLFW.
+/// Comments: INTERNAL use only.
+pub fn mousePositionCallback(window: ?*c.GLFWwindow, x_pos: f64, y_pos: f64) callconv(.C) void {
+    mouse_position = Vector2.new(@floatCast(f32, x_pos), @floatCast(f32, y_pos));
+}
+
+/// The mouse button callback for GLFW.
+/// Comments: INTERNAL use only.
+pub fn mouseButtonCallback(window: ?*c.GLFWwindow, button: c_int, action: c_int, mods: c_int) callconv(.C) void {
+    const button_convert = @intCast(u8, button);
+    const button_enum = @intToEnum(DrossMouseButton, button_convert);
+    if (mouse_button_map.contains(button_enum)) {
+        if (action == c.GLFW_PRESS) {
+            mouse_button_map.put(button_enum, DrossInputState.Pressed) catch |err| {
+                if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into mouse button state map!");
+            };
+        } else if (action == c.GLFW_RELEASE) {
+            mouse_button_map.put(button_enum, DrossInputState.Released) catch |err| {
+                if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into mouse button state map!");
+            };
+            mouse_button_released_set.put(button_enum, {}) catch |err| {
+                if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into mouse button state map!");
+            };
+        } else if (action == c.GLFW_REPEAT) {
+            mouse_button_map.put(button_enum, DrossInputState.Down) catch |err| {
+                if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into mouse button state map!");
+            };
+        }
+    }
+}
+
+// --------------------------------------------------------
+//      - Keyboard Specific -
+// --------------------------------------------------------
+
+/// Holds the most recent key states
+var key_map: std.AutoHashMap(DrossKey, DrossInputState) = undefined;
+
+/// A HashSet that holds any keys that have recently been released. 
+/// Released only needs to be held for frame or so, and 
+/// then any keys stored will be set to neutral.
+var key_released_set: std.AutoHashMap(DrossKey, void) = undefined;
+
+/// Checks for any released keys from the previous frame, and resets them to neutral.
+fn updateReleasedKeys() void {
+    if (key_released_set.count() == 0) return;
+
+    // Cycle through the released map
+    var iterator = key_released_set.iterator();
+    while (iterator.next()) |entry| {
+        const key = entry.key;
+        // Check if the state of the key has changed from released to pressed or down
+        const current_state = key_map.get(key).?;
+        // If it has not changed, then set it to neutral.
+        if (current_state == DrossInputState.Released) {
+            key_map.put(key, DrossInputState.Neutral) catch |err| {
+                if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into key state map!");
+            };
+        }
+        // Otherwise, leave the state alone and just remove all keys at the end.
+        _ = key_released_set.remove(key);
+    }
+}
 
 /// The key callback for GLFW so that we can more accurately keep track of key states.
 /// Comments: INTERNAL use only.
@@ -227,7 +382,6 @@ pub fn keyCallback(window: ?*c.GLFWwindow, key: c_int, scancode: c_int, action: 
             key_released_set.put(key_enum, {}) catch |err| {
                 if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into key state map!");
             };
-            std.debug.print("RELEASED\n", .{});
         } else if (action == c.GLFW_REPEAT) {
             key_map.put(key_enum, DrossInputState.Down) catch |err| {
                 if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into key state map!");
@@ -361,4 +515,3 @@ pub const DrossKey = enum(i16){
     KeyRightSuper       = 347,
     KeyMenu             = 348,
 };
-

@@ -10,6 +10,7 @@ const Vector3 = @import("../core/vector3.zig").Vector3;
 const input = @import("input.zig");
 const Input = input.Input;
 const DrossKey = input.DrossKey;
+const DrossMouseButton = input.DrossMouseButton;
 // ----------------------------------------------------
 
 /// Error Set for Application-related Errors
@@ -65,7 +66,7 @@ pub const Application = struct {
 
             // Submit
             c.glfwSwapBuffers(window);
-            Input.updateReleasedKeys();
+            Input.updateInput();
             c.glfwPollEvents();
         }
     }
@@ -130,6 +131,14 @@ pub const Application = struct {
     /// Process the application input
     pub fn processInput(self: *Application, delta: f64) void {
         // TODO(devon): Remove when shipping
+        if (Input.getMouseButtonDown(DrossMouseButton.MouseButtonLeft)) {
+            std.debug.print("Left mouse button DOWN!\n", .{});
+        } else if (Input.getMouseButtonPressed(DrossMouseButton.MouseButtonLeft)) {
+            std.debug.print("Left mouse button PRESSED!\n", .{});
+        }
+        if (Input.getMouseButtonReleased(DrossMouseButton.MouseButtonLeft)) {
+            std.debug.print("Left mouse button RELEASED!\n", .{});
+        }
         var camera: *cam.Camera2d = cam.getCurrentCamera().?;
         if (Input.getKeyPressed(DrossKey.KeyEscape)) c.glfwSetWindowShouldClose(window, c.GL_TRUE);
         if (Input.getKeyReleased(DrossKey.KeyF1)) {
