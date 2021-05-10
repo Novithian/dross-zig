@@ -24,8 +24,7 @@ pub const Input = struct {
 
     /// Returns true if the key in question was just released.
     pub fn getKeyReleased(key: DrossKey) bool {
-        var state = c.glfwGetKey(Application.getWindow(), @enumToInt(key));
-        return state == c.GLFW_RELEASE;
+        return key_released_set.contains(key);
     }
 
     /// Returns the f32 value version of getKeyReleased
@@ -34,36 +33,207 @@ pub const Input = struct {
         return @intToFloat(f32, @boolToInt(key_released));
     }
 
+    /// Allocates and builds the required components for the Input system.
+    /// Comments: Any allocated memory will be owned by the Input System.
     pub fn build(allocator: *std.mem.Allocator) !void {
         _ = c.glfwSetKeyCallback(Application.getWindow(), keyCallback);
         key_map = std.AutoHashMap(DrossKey, DrossInputState).init(allocator);
+        key_released_set = std.AutoHashMap(DrossKey, void).init(allocator);
 
-        try key_map.put(DrossKey.KeyD, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF1, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF2, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF3, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF4, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF5, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF6, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF7, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF8, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF9, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF10, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF11, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF12, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF13, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF14, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF15, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF16, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF17, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF18, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF19, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF20, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF21, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF22, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF23, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF24, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF25, DrossInputState.Neutral);
         try key_map.put(DrossKey.KeyA, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyB, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyC, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyD, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyE, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyF, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyG, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyH, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyI, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyJ, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyK, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyL, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyM, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyN, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyO, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyP, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyQ, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyR, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyS, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyT, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyU, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyV, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyW, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyX, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyY, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyZ, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyUnknown, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeySpace, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyApostrophe, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyComma, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyMinus, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyPeriod, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeySlash, DrossInputState.Neutral);
+        try key_map.put(DrossKey.Key0, DrossInputState.Neutral);
+        try key_map.put(DrossKey.Key1, DrossInputState.Neutral);
+        try key_map.put(DrossKey.Key2, DrossInputState.Neutral);
+        try key_map.put(DrossKey.Key3, DrossInputState.Neutral);
+        try key_map.put(DrossKey.Key4, DrossInputState.Neutral);
+        try key_map.put(DrossKey.Key5, DrossInputState.Neutral);
+        try key_map.put(DrossKey.Key6, DrossInputState.Neutral);
+        try key_map.put(DrossKey.Key7, DrossInputState.Neutral);
+        try key_map.put(DrossKey.Key8, DrossInputState.Neutral);
+        try key_map.put(DrossKey.Key9, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeySemiColon, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyEqual, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyLeftBracket, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyBackslash, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyRightBracket, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyBacktick, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyWorld1, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyWorld2, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyEscape, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyEnter, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyTab, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyBackspace, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyInsert, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyDelete, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyRight, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyLeft, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyUp, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyDown, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyPageUp, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyPageDown, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyHome, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyEnd, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyCapsLock, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyScrollLock, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyNumLock, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyPrintScreen, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyPause, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypad0, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypad1, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypad2, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypad3, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypad4, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypad5, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypad6, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypad7, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypad8, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypad9, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypadDecimal, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypadDivide, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypadMultiply, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypadSubtract, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypadAdd, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypadEnter, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyKeypadEqual, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyLeftShift, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyLeftControl, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyLeftAlt, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyLeftSuper, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyRightShift, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyRightControl, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyRightAlt, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyRightSuper, DrossInputState.Neutral);
+        try key_map.put(DrossKey.KeyMenu, DrossInputState.Neutral);
     }
 
     pub fn free(allocator: *std.mem.Allocator) void {
         key_map.deinit();
+        key_released_set.deinit();
+    }
+
+    /// Checks for any released keys from the previous frame, and resets them to neutral.
+    pub fn updateReleasedKeys() void {
+        if (key_released_set.count() == 0) return;
+
+        // Cycle through the released map
+        var iterator = key_released_set.iterator();
+        while (iterator.next()) |entry| {
+            const key = entry.key;
+            // Check if the state of the key has changed from released to pressed or down
+            const current_state = key_map.get(key).?;
+            // If it has not changed, then set it to neutral.
+            if (current_state == DrossInputState.Released) {
+                key_map.put(key, DrossInputState.Neutral) catch |err| {
+                    if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into key state map!");
+                };
+            }
+            // Otherwise, leave the state alone and just remove all keys at the end.
+            _ = key_released_set.remove(key);
+        }
     }
 };
 
-/// The possible states of input
-pub const DrossInputState = enum(u8) {
-    /// If the input is in the default position and has not been changed 
-    Neutral,
-    /// If the input just pressed this frame
-    Pressed,
-    /// If the input was released this frame
-    Released,
-    /// If the input was help for multiple frames
-    Held,
-};
-
+/// Holds the most recent key states
 var key_map: std.AutoHashMap(DrossKey, DrossInputState) = undefined;
 
-/// 
+/// A HashSet that holds any keys that have recently been released. 
+/// Released only needs to be held for frame or so, and 
+/// then any keys stored will be set to neutral.
+var key_released_set: std.AutoHashMap(DrossKey, void) = undefined;
+
+/// The possible states of input
+const DrossInputState = enum(u8) {
+    /// If the input is in the default position and has not been changed 
+    Neutral = 3,
+    /// If the input just pressed this frame
+    Pressed = c.GLFW_PRESS,
+    /// If the input was released this frame
+    Released = c.GLFW_RELEASE,
+    /// If the input was help for multiple frames
+    Down = c.GLFW_REPEAT,
+};
+
+/// The key callback for GLFW so that we can more accurately keep track of key states.
+/// Comments: INTERNAL use only.
 pub fn keyCallback(window: ?*c.GLFWwindow, key: c_int, scancode: c_int, action: c_int, mods: c_int) callconv(.C) void {
-    //
+    const key_convert = @intCast(i16, key);
+    const key_enum = @intToEnum(DrossKey, key_convert);
+    if (key_map.contains(key_enum)) {
+        if (action == c.GLFW_PRESS) {
+            key_map.put(key_enum, DrossInputState.Pressed) catch |err| {
+                if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into key state map!");
+            };
+        } else if (action == c.GLFW_RELEASE) {
+            key_map.put(key_enum, DrossInputState.Released) catch |err| {
+                if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into key state map!");
+            };
+            key_released_set.put(key_enum, {}) catch |err| {
+                if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into key state map!");
+            };
+            std.debug.print("RELEASED\n", .{});
+        } else if (action == c.GLFW_REPEAT) {
+            key_map.put(key_enum, DrossInputState.Down) catch |err| {
+                if (err == error.OutOfMemory) @panic("[Input] Ran out of memory when trying put into key state map!");
+            };
+        }
+    }
 }
 
 /// Keycode wrapper for GLFW

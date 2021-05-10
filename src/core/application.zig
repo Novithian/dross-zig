@@ -65,6 +65,7 @@ pub const Application = struct {
 
             // Submit
             c.glfwSwapBuffers(window);
+            Input.updateReleasedKeys();
             c.glfwPollEvents();
         }
     }
@@ -141,7 +142,7 @@ pub const Application = struct {
                 self.setWindowTitle("[DEBUG] Dross-Zig Application");
             }
         }
-        if (Input.getKeyPressed(DrossKey.KeyP)) {
+        if (Input.getKeyReleased(DrossKey.KeyP)) {
             if (debug_mode) {
                 if (pause) {
                     pause = false;

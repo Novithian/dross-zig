@@ -3,10 +3,11 @@
 - Wrapper for zalgebra vec4
 - Create the test texture in the main file
 - Pixel snap
-- Manage input key states 
-
-## **LOG** ##
+	## **LOG** ##
 -------------
+- **[05-10-2021]**
+	- Allowed for transparency in the fragment shader.
+	- Manage Input Keyboard states to allow for proper released input detection 
 - **[05-09-2021]**
 	- Implement a Render API to allow for the end user to draw. Rendere will handle pre-draw, and post-draw. Something simple like DrawQuad.
 	- Implement a wrapper around zalgebra's vec3 and vec2
