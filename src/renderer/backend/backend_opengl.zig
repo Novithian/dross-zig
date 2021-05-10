@@ -233,17 +233,35 @@ pub const OpenGlBackend = struct {
          // Tell OpenGL which shader program's pipeline we want to use
         self.shader_program.?.use();
 
-        // Set up projection_view matrix
-        self.projection_view = Matrix4.identity();
-        // NOTE(devon): In Orthographic mode, the projection will be just an identity matrix.
-        // Making the projection_view matrix nothing more than a simple translation matrix.
-        const projection_view_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "projection_view");
+        const camera_pos = camera.getPosition();
+        const camera_target = camera.getTargetPosition();
+        const camera_direction = camera_pos.subtract(camera_target).normalize();
+        const camera_right = Vector3.up().cross(camera_direction).normalize();
+        const camera_up = camera_direction.cross(camera_right);
+        const camera_zoom = camera.getZoom();
+
+        // Set up projection matrix
+        const projection = Matrix4.identity().scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
+
+        // Set up the view matrix
+        //const view = Matrix4.lookAt(camera_pos, Vector3.forward().scale(-1.0), Vector3.up());
+        const view = Matrix4.fromTranslate(camera_pos);
+
+        const projection_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "projection");
+        const view_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "view");
 
         c.glUniformMatrix4fv(
-            projection_view_location,  // Location
+            projection_location,  // Location
             1,                  // count
             c.GL_FALSE,         // transpose from column-major to row-major
-            @ptrCast(*const f32, &self.projection_view)// data
+            @ptrCast(*const f32, &projection.data)// data
+        );
+
+        c.glUniformMatrix4fv(
+            view_location,  // Location
+            1,                  // count
+            c.GL_FALSE,         // transpose from column-major to row-major
+            @ptrCast(*const f32, &view.data)// data
         );
     }
         

@@ -33,6 +33,8 @@ pub const CameraError = error{
 pub const Camera2d = struct {
     /// Unique Camera ID
     id: u16,
+    /// The position of the camera
+    position: Vector3,
     /// The target position the camera should be focusing on
     target_position: Vector3,
     /// Level of zoom
@@ -41,9 +43,10 @@ pub const Camera2d = struct {
     near: f32 = 0.0,
     /// Determines how far something can be before getting clipped
     far: f32 = 0.0,
+    /// How quickly the camera will travel
+    speed: f32 = 2.0,
     /// Is this camera the currently active one
     current: bool = false,
-    transform: Matrix4,
 
     const Self = @This();
 
@@ -53,8 +56,8 @@ pub const Camera2d = struct {
         self.zoom = 1.0;
         self.near = 0.01;
         self.far = 100.0;
-
-        self.transform = Matrix4.identity();
+        self.speed = 2.0;
+        self.position = Vector3.new(0.0, 0.0, 0.0);
     }
 
     /// Ensures to reduce the camera cound and removes the camera from the cameras list
@@ -72,9 +75,32 @@ pub const Camera2d = struct {
         self.zoom = zoom;
     }
 
-    /// Returns the camera's transform
-    pub fn getTransform(self: *Self) Matrix4 {
-        return self.transform;
+    /// Sets the camera speed
+    pub fn setSpeed(self: *Self, speed: f32) void {
+        self.speed = speed;
+    }
+    /// Sets the position of the camera
+    pub fn setPosition(self: *Self, new_position: Vector3) void {
+        self.position = self.position.copy(new_position);
+    }
+
+    /// Returns the zoom of the camera
+    pub fn getZoom(self: *Self) f32 {
+        return self.zoom;
+    }
+    /// Returns the position of the camera
+    pub fn getPosition(self: *Self) Vector3 {
+        return self.position;
+    }
+
+    /// Returns the speed of the camera
+    pub fn getSpeed(self: *Self) f32 {
+        return self.speed;
+    }
+
+    /// Returns the target position
+    pub fn getTargetPosition(self: *Self) Vector3 {
+        return self.target_position;
     }
 };
 

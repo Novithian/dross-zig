@@ -12,11 +12,11 @@ _**dross-zig**_ is a bare bones game framework written in :zap:[Zig](https://git
 - stb_image (Industry tested image loader)
 
 ## Feature TODOs
-[ ] - Sprite Batching
-[ ] - Input Wrapper
-[ ] - Asset Management
-[ ] - Basic ECS System
-[ ] - Audio System
+- [ ] - Sprite Batching
+- [x] - Input Wrapper
+- [ ] - Asset Management
+- [ ] - Basic ECS System
+- [ ] - Audio System
 
 
 ## **Disclaimer** 

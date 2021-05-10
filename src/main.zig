@@ -29,6 +29,7 @@ const APP_HEIGHT = 720;
 var app: *Application = undefined;
 
 var quad_position: Vector3 = undefined;
+var quad_position_two: Vector3 = undefined;
 
 pub fn main() anyerror!u8 {
 
@@ -59,6 +60,7 @@ pub fn main() anyerror!u8 {
 
     // Setup
     quad_position = Vector3.zero();
+    quad_position_two = Vector3.new(1.0, 0.5, 0.0);
 
     // Begin the game loop
     app.*.run();
@@ -67,9 +69,18 @@ pub fn main() anyerror!u8 {
 }
 // Defined what game-level tick/update logic you want to control in the game.
 pub export fn update(delta: f64) void {
-    quad_position = quad_position.add(Vector3.new(1 * @floatCast(f32, delta), 0.0, 0.0));
+    var input_horizontal = Input.getKeyPressedValue(DrossKey.KeyD) - Input.getKeyPressedValue(DrossKey.KeyA);
+    var input_vertical = Input.getKeyPressedValue(DrossKey.KeyW) - Input.getKeyPressedValue(DrossKey.KeyS);
+
+    quad_position = quad_position.add( //
+        Vector3.new( //
+        input_horizontal * @floatCast(f32, delta), //
+        input_vertical * @floatCast(f32, delta), //
+        0.0, //
+    ));
 }
 
 pub export fn render() void {
+    Renderer.drawQuad(quad_position_two);
     Renderer.drawQuad(quad_position);
 }

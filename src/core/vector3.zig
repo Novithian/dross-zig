@@ -53,6 +53,13 @@ pub const Vector3 = struct {
         };
     }
 
+    /// Copies the values of the given Vector
+    pub fn copy(self: Self, other: Self) Self {
+        return .{
+            .data = Vec3.new(other.data.x, other.data.y, other.data.z),
+        };
+    }
+
     /// Shorthand for a zeroed out Vector 3
     pub fn zero() Self {
         return Self{
@@ -105,7 +112,7 @@ pub const Vector3 = struct {
 
     /// Returns whether two vectors are equal or not
     pub fn isEqual(lhs: Self, rhs: Self) bool {
-        return lsh.data.is_eq(rhs.data);
+        return lhs.data.is_eq(rhs.data);
     }
 
     /// Subtraction between two vectors.
@@ -126,6 +133,13 @@ pub const Vector3 = struct {
     pub fn scale(self: Self, scalar: f32) Self {
         return Self{
             .data = self.data.scale(scalar),
+        };
+    }
+
+    /// Returns the cross product of the given vectors.
+    pub fn cross(lhs: Self, rhs: Self) Self {
+        return Self{
+            .data = lhs.data.cross(rhs.data),
         };
     }
 

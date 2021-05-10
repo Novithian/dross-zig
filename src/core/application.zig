@@ -6,13 +6,11 @@ const gfx = @import("../renderer/renderer.zig");
 const cam = @import("../renderer/cameras/camera_2d.zig");
 const EventLoop = @import("event_loop.zig");
 const Vector2 = @import("../core/vector2.zig").Vector2;
+const Vector3 = @import("../core/vector3.zig").Vector3;
+const input = @import("input.zig");
+const Input = input.Input;
+const DrossKey = input.DrossKey;
 // ----------------------------------------------------
-
-/// User defined update/tick function
-//pub extern fn update(delta: f64) void;
-
-/// User defined render function
-//pub extern fn render() void;
 
 /// Error Set for Application-related Errors
 pub const ApplicationError = error{
@@ -26,7 +24,13 @@ pub const ApplicationError = error{
 pub var debug_mode = false;
 pub var pause = false;
 
-pub var window_size: Vector2 = undefined;
+/// Stores the current size of the window
+var window_size: Vector2 = undefined;
+
+/// Stores the window to allow other systems
+/// to communicate with it without needing a 
+/// Application instance.
+var window: *c.GLFWwindow = undefined;
 
 // -----------------------------------------
 //      - Application -
@@ -36,13 +40,12 @@ pub var window_size: Vector2 = undefined;
 /// Most of the communication from the end-user will come
 /// through the application instance.
 pub const Application = struct {
-    window: *c.GLFWwindow = undefined,
     allocator: ?*std.mem.Allocator = undefined,
     previous_frame_time: f64 = 0,
 
     /// Runs the applications main event loop. 
     pub fn run(self: *Application) void {
-        while (c.glfwWindowShouldClose(self.window) == 0) {
+        while (c.glfwWindowShouldClose(window) == 0) {
             // Calculate timestep
             const current_time = c.glfwGetTime();
             var delta = current_time - self.previous_frame_time;
@@ -52,7 +55,7 @@ pub const Application = struct {
             if (debug_mode and pause) delta = 0;
 
             // Process input
-            self.processInput();
+            self.processInput(delta);
 
             // Update
             EventLoop.updateInternal(delta);
@@ -61,7 +64,7 @@ pub const Application = struct {
             gfx.Renderer.render();
 
             // Submit
-            c.glfwSwapBuffers(self.window);
+            c.glfwSwapBuffers(window);
             c.glfwPollEvents();
         }
     }
@@ -79,7 +82,7 @@ pub const Application = struct {
         c.glfwWindowHint(c.GLFW_OPENGL_FORWARD_COMPAT, c.GL_TRUE);
 
         // Window Creation
-        self.window = c.glfwCreateWindow(width, height, title, null, null) orelse return ApplicationError.WindowCreation;
+        window = c.glfwCreateWindow(width, height, title, null, null) orelse return ApplicationError.WindowCreation;
 
         // Set the global variables
         window_size = Vector2.new(
@@ -88,7 +91,7 @@ pub const Application = struct {
         );
 
         // Make our window the current context
-        c.glfwMakeContextCurrent(self.window);
+        c.glfwMakeContextCurrent(window);
 
         // Build the Renderer
         try gfx.buildRenderer(allocator);
@@ -96,13 +99,15 @@ pub const Application = struct {
         // Remember to set the app's allocator to the passed allocator
         self.allocator = allocator;
 
-        _ = c.glfwSetFramebufferSizeCallback(self.window, gfx.Renderer.resizeInternal);
+        _ = c.glfwSetFramebufferSizeCallback(window, gfx.Renderer.resizeInternal);
 
         // Resize the application's viewport to match that of the window
-        // app.resize(0, 0, width, height);
+        self.resize(0, 0, width, height);
 
         // Make sure there is at least a single Camera instance
         try cam.buildCamera2d(allocator);
+
+        try Input.build(allocator);
     }
 
     /// Gracefully terminates the Application by cleaning up
@@ -112,19 +117,21 @@ pub const Application = struct {
     /// defer gpa.allocator.destroy(app);
     /// defer app.*.free()
     pub fn free(self: *Application) void {
-        c.glfwDestroyWindow(self.window);
+        c.glfwDestroyWindow(window);
         c.glfwTerminate();
 
         // Manually allocated memory cleanup
+        Input.free(self.allocator.?);
         cam.freeAllCamera2d(self.allocator.?);
         try gfx.freeRenderer(self.allocator.?);
     }
 
     /// Process the application input
-    pub fn processInput(self: *Application) void {
+    pub fn processInput(self: *Application, delta: f64) void {
         // TODO(devon): Remove when shipping
-        if (c.glfwGetKey(self.window, c.GLFW_KEY_ESCAPE) == c.GLFW_PRESS) c.glfwSetWindowShouldClose(self.window, c.GL_TRUE);
-        if (c.glfwGetKey(self.window, c.GLFW_KEY_F1) == c.GLFW_PRESS) {
+        var camera: *cam.Camera2d = cam.getCurrentCamera().?;
+        if (Input.getKeyPressed(DrossKey.KeyEscape)) c.glfwSetWindowShouldClose(window, c.GL_TRUE);
+        if (Input.getKeyReleased(DrossKey.KeyF1)) {
             if (debug_mode) {
                 debug_mode = false;
                 pause = false;
@@ -134,7 +141,7 @@ pub const Application = struct {
                 self.setWindowTitle("[DEBUG] Dross-Zig Application");
             }
         }
-        if (c.glfwGetKey(self.window, c.GLFW_KEY_P) == c.GLFW_PRESS) {
+        if (Input.getKeyPressed(DrossKey.KeyP)) {
             if (debug_mode) {
                 if (pause) {
                     pause = false;
@@ -145,17 +152,67 @@ pub const Application = struct {
                 }
             }
         }
+
+        if (debug_mode) {
+            var camera_pos = camera.getPosition();
+            const camera_zoom = camera.getZoom();
+            var delta_pos = Vector3.zero();
+            const camera_speed = camera.getSpeed() * @floatCast(f32, delta);
+
+            // Zoom in
+            if (Input.getKeyPressed(DrossKey.KeyU)) {
+                camera.setZoom(camera_zoom - camera_speed);
+            }
+            // Zoom out
+            if (Input.getKeyPressed(DrossKey.KeyI)) {
+                camera.setZoom(camera_zoom + camera_speed);
+            }
+            // Right
+            if (Input.getKeyPressed(DrossKey.KeyL)) {
+                var dir = Vector3.right().scale(-1.0); //Vector3.forward().scale(-1.0).cross(Vector3.up()).normalize();
+                delta_pos = delta_pos.add(dir.scale(camera_speed));
+            }
+            // Left
+            if (Input.getKeyPressed(DrossKey.KeyH)) {
+                var dir = Vector3.right(); //.scale(1.0).cross(Vector3.up()).normalize();
+                delta_pos = delta_pos.add(dir.scale(camera_speed));
+            }
+            // Up
+            if (Input.getKeyPressed(DrossKey.KeyK)) {
+                var dir = Vector3.up().scale(-1.0); //Vector3.forward().scale(-1.0).cross(Vector3.up()).normalize();
+                delta_pos = delta_pos.add(dir.scale(camera_speed));
+            }
+            // Down
+            if (Input.getKeyPressed(DrossKey.KeyJ)) {
+                var dir = Vector3.up(); //.scale(1.0).cross(Vector3.up()).normalize();
+                delta_pos = delta_pos.add(dir.scale(camera_speed));
+            }
+            // Reset Position and Zoom
+            if (Input.getKeyPressed(DrossKey.KeyBackspace)) {
+                delta_pos = Vector3.zero();
+                camera_pos = Vector3.zero();
+                camera.setZoom(1.0);
+            }
+
+            camera_pos = camera_pos.add(delta_pos);
+            camera.setPosition(camera_pos);
+        }
     }
 
     /// Resize the application
     pub fn resize(self: *Application, x: c_int, y: c_int, width: c_int, height: c_int) void {
         // Call renderer's resize method
-        gfx.renderer.?.resizeViewport(x, y, width, height);
+        gfx.Renderer.resizeViewport(x, y, width, height);
     }
 
     /// Sets the application's window title
     pub fn setWindowTitle(self: *Application, title: [*c]const u8) void {
-        c.glfwSetWindowTitle(self.window, title);
+        c.glfwSetWindowTitle(window, title);
+    }
+
+    /// Returns the application's window
+    pub fn getWindow() *c.GLFWwindow {
+        return window;
     }
 };
 

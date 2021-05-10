@@ -1,9 +1,9 @@
 ## **TODO** ##
 --------------
 - Wrapper for zalgebra vec4
-- Create the test texture and transform in the main file
-- Camera movements
-- Camera zoom
+- Create the test texture in the main file
+- Pixel snap
+- Manage input key states 
 
 ## **LOG** ##
 -------------
@@ -12,6 +12,9 @@
 	- Implement a wrapper around zalgebra's vec3 and vec2
 	- Replace all instances of using zalgebra's Vectors and move them over to wrapper Vectors.
 	- Moving any uses of za's matrices to dross's wrapper matrix in camera/renderer
+	- Input Wrapper
+	- Orthographic Camera movements
+	- Camera zoom
 - **[05-08-2021]**
 	- Figure out a way to handle lifetime events.
 	- Add a render event for the user to implement
