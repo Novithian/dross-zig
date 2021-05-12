@@ -1,13 +1,33 @@
+## **GOALS** ##
+- [ ] Create a minimum framework to allow for a small
+2D pixel-art game.
+
 ## **TODO** ##
---------------
+
 ### General ###
 - Wrapper for zalgebra vec4
-- Create the test texture in the main file
 - Pixel snap
+
+### Texture ###
+
 ### Input ###
 - Mouse manage state to detect down
-	## **LOG** ##
--------------
+
+### Collision System ###
+- Basic AABB (axis-aligned bounding box) collision system
+
+### Audio ###
+- integrate libsoundio or fmod
+
+### Text Rendering ###
+- self-explanatory
+
+## **LOG** ##
+- **[05-11-2021]**
+	- File loader util
+    - ResourceHandler
+    - Extract the debug texture from the renderer and allow the user to provide a texture for drawTexturedQuad. Have a default white texture for draw quad for geometry drawing.
+    - Create the test texture in the main file
 - **[05-10-2021]**
 	- Allowed for transparency in the fragment shader.
 	- Manage Input Keyboard states to allow for proper released input detection 

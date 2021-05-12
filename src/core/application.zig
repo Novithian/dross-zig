@@ -5,6 +5,7 @@ const std = @import("std");
 const gfx = @import("../renderer/renderer.zig");
 const cam = @import("../renderer/cameras/camera_2d.zig");
 const EventLoop = @import("event_loop.zig");
+const res = @import("resource_handler.zig");
 const Vector2 = @import("../core/vector2.zig").Vector2;
 const Vector3 = @import("../core/vector3.zig").Vector3;
 const input = @import("input.zig");
@@ -95,6 +96,9 @@ pub const Application = struct {
         // Make our window the current context
         c.glfwMakeContextCurrent(window);
 
+        // Build the Resource Hanlder
+        res.ResourceHandler.build(allocator);
+
         // Build the Renderer
         try gfx.buildRenderer(allocator);
 
@@ -106,10 +110,13 @@ pub const Application = struct {
         // Resize the application's viewport to match that of the window
         self.resize(0, 0, width, height);
 
+        // Build the rest of the core components of an application
+
         // Make sure there is at least a single Camera instance
         try cam.buildCamera2d(allocator);
 
         try Input.build(allocator);
+
     }
 
     /// Gracefully terminates the Application by cleaning up
@@ -126,19 +133,12 @@ pub const Application = struct {
         Input.free(self.allocator.?);
         cam.freeAllCamera2d(self.allocator.?);
         try gfx.freeRenderer(self.allocator.?);
+        res.freeResourceHandler();
     }
 
     /// Process the application input
     pub fn processInput(self: *Application, delta: f64) void {
         // TODO(devon): Remove when shipping
-        if (Input.getMouseButtonDown(DrossMouseButton.MouseButtonLeft)) {
-            std.debug.print("Left mouse button DOWN!\n", .{});
-        } else if (Input.getMouseButtonPressed(DrossMouseButton.MouseButtonLeft)) {
-            std.debug.print("Left mouse button PRESSED!\n", .{});
-        }
-        if (Input.getMouseButtonReleased(DrossMouseButton.MouseButtonLeft)) {
-            std.debug.print("Left mouse button RELEASED!\n", .{});
-        }
         var camera: *cam.Camera2d = cam.getCurrentCamera().?;
         if (Input.getKeyPressed(DrossKey.KeyEscape)) c.glfwSetWindowShouldClose(window, c.GL_TRUE);
         if (Input.getKeyReleased(DrossKey.KeyF1)) {

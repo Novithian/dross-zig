@@ -5,6 +5,7 @@ const za = @import("zalgebra");
 
 // dross-zig
 const gl = @import("backend/backend_opengl.zig");
+const TextureId = @import("texture.zig").TextureId;
 const Color = @import("../core/core.zig").Color;
 const Camera = @import("../renderer/cameras/camera_2d.zig");
 const EventLoop = @import("../core/event_loop.zig");
@@ -103,10 +104,22 @@ pub const Renderer = struct {
     /// Comments: INTERNAL use only.
     pub fn endRender() void {}
 
+    /// Sets up renderer to be able to draw a untextured quad.
     pub fn drawQuad(position: Vector3) void {
         switch (api) {
             BackendApi.OpenGl => {
                 renderer.gl_backend.?.drawQuad(position);
+            },
+            BackendApi.Dx12 => {},
+            BackendApi.Vulkan => {},
+        }
+    }
+
+    /// Sets up renderer to be able to draw a textured quad.
+    pub fn drawTexturedQuad(id: TextureId, position: Vector3) void {
+        switch (api) {
+            BackendApi.OpenGl => {
+                renderer.gl_backend.?.drawTexturedQuad(id, position);
             },
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},

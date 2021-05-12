@@ -6,9 +6,12 @@ const za = @import("zalgebra");
 // dross-zig
 const Color = @import("../../core/core.zig").Color;
 const texture = @import("../texture.zig");
+const TextureId = texture.TextureId;
 const Camera = @import("../cameras/camera_2d.zig");
 const Matrix4 = @import("../../core/matrix4.zig").Matrix4;
 const Vector3 = @import("../../core/vector3.zig").Vector3;
+const fs = @import("../../utils/file_loader.zig");
+const rh = @import("../../core/resource_handler.zig");
 
 // Testing vertices and indices
 // zig fmt: off
@@ -41,8 +44,8 @@ const square_tex_coords: [8]f32 = [8]f32{
 // -----------------------------------------
 //      - GLSL Default Shaders -
 // -----------------------------------------
-const default_shader_vs: [:0]const u8 = "default_shader.vs";
-const default_shader_fs: [:0]const u8 = "default_shader.fs";
+const default_shader_vs: [:0]const u8 = "assets/shaders/default_shader.vs";
+const default_shader_fs: [:0]const u8 = "assets/shaders/default_shader.fs";
 
 // -----------------------------------------
 //      - OpenGL Errors -
@@ -204,21 +207,20 @@ pub const OpenGlBackend = struct {
 
         // TODO(devon): remove 
         // For debug purposes only
-        self.debug_texture = try texture.buildTexture(allocator);
+        const debug_texture_op = try rh.ResourceHandler.loadTexture("default_texture", "assets/textures/t_default.png");
+        self.debug_texture = debug_texture_op orelse return texture.TextureErrors.FailedToLoad;
 
     }
 
     /// Frees up any resources that was previously allocated
     pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
         // Allow for OpenGL object to de-allocate any memory it needed
-        self.debug_texture.?.free(allocator);
         self.vertex_array.?.free();
         self.vertex_buffer.?.free();
         self.index_buffer.?.free();
         self.shader_program.?.free();
 
         // Free memory
-        allocator.destroy(self.debug_texture.?);
         allocator.destroy(self.vertex_array.?);
         allocator.destroy(self.vertex_buffer.?);
         allocator.destroy(self.index_buffer.?);
@@ -265,7 +267,7 @@ pub const OpenGlBackend = struct {
         );
     }
         
-
+    /// Sets up renderer to be able to draw a untextured quad.
     pub fn drawQuad(self: *Self, position: Vector3) void {
          // Bind Texture
         c.glBindTexture(c.GL_TEXTURE_2D, self.debug_texture.?.getGlId());
@@ -285,7 +287,27 @@ pub const OpenGlBackend = struct {
         
         self.drawIndexed(self.vertex_array.?);
     }
+    
+    /// Sets up renderer to be able to draw a textured quad.
+    pub fn drawTexturedQuad(self: *Self, id: TextureId, position: Vector3) void {
+         // Bind Texture
+        c.glBindTexture(c.GL_TEXTURE_2D, id.id_gl);
+        // Translation * Rotation * Scale
+        const transform = Matrix4.fromTranslate(position);
+        
+        const model_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "model");
+        c.glUniformMatrix4fv(
+            model_location,  // Location
+            1,                  // count
+            c.GL_FALSE,         // transpose from column-major to row-major
+            @ptrCast(*const f32, &transform.data)// data
+        );
 
+        // Bind the VAO
+        self.vertex_array.?.bind();
+        
+        self.drawIndexed(self.vertex_array.?);
+    }
 
     /// Draws geometry with a index buffer
     pub fn drawIndexed(self: *Self, vertex_array: *GlVertexArray) void {
@@ -496,33 +518,16 @@ const GlShader = struct {
     }
 
     /// Sources a given GLSL shader file
-    pub fn source(self: *GlShader, filename: [:0]const u8) anyerror!void {
-        // Open the shader directory
-        var dir = try std.fs.cwd().openDir(
-            //"src/renderer/shaders",
-            "resources/shaders",
-            .{},
-        );
+    pub fn source(self: *GlShader, path: [:0]const u8) anyerror!void {
+        
+        const source_slice = fs.loadFile(path) catch | err | {
+            std.debug.print("[Shader]: Failed to load shader ({s})! {}\n", .{path, err});
+            return err;
+        };
+        
+        const source_size = source_slice.?.len;
 
-        // Get the source file
-        const file = try dir.openFile(
-            filename,
-            .{},
-        );
-
-        defer (&dir).close();
-        defer file.close();
-
-        // Create a buffer to store the file read in
-        var file_buffer: [4096]u8 = undefined;
-
-        try file.seekTo(0);
-
-        const source_bytes = try file.readAll(&file_buffer);
-        const source_slice = file_buffer[0..source_bytes];
-        const source_size = source_slice.len;
-
-        c.glShaderSource(self.handle, 1, &source_slice.ptr, @ptrCast(*const c_int, &source_size));
+        c.glShaderSource(self.handle, 1, &source_slice.?.ptr, @ptrCast(*const c_int, &source_size));
     }
 
     /// Compiles the previously sources GLSL shader file, and checks for any compilation errors.

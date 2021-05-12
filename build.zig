@@ -34,9 +34,10 @@ pub fn build(b: *std.build.Builder) void {
     });
 
     // Copy over the resource code
-    b.installBinFile("src/renderer/shaders/default_shader.vs", "resources/shaders/default_shader.vs");
-    b.installBinFile("src/renderer/shaders/default_shader.fs", "resources/shaders/default_shader.fs");
-    b.installBinFile("assets/sprites/s_guy_idle.png", "resources/sprites/s_guy_idle.png");
+    b.installBinFile("src/renderer/shaders/default_shader.vs", "assets/shaders/default_shader.vs");
+    b.installBinFile("src/renderer/shaders/default_shader.fs", "assets/shaders/default_shader.fs");
+    b.installBinFile("assets/sprites/s_guy_idle.png", "assets/sprites/s_guy_idle.png");
+    b.installBinFile("assets/sprites/s_enemy_01_idle.png", "assets/sprites/s_enemy_01_idle.png");
 
     exe.linkLibC();
 

@@ -3,7 +3,9 @@ const c = @import("../../c_global.zig").c_imp;
 const std = @import("std");
 // dross-zig
 const InternalTexture = @import("../texture.zig").InternalTexture;
+const TextureErrors = @import("../texture.zig").TextureErrors;
 const apis = @import("../renderer.zig").BackendApi;
+const fs = @import("../../utils/file_loader.zig");
 
 // -----------------------------------------
 //      - OpenGlTexture -
@@ -27,7 +29,7 @@ pub const OpenGlTexture = struct {
     const Self = @This();
 
     /// Builds the OpenGLTexture object and allocates any required memory
-    pub fn build(self: *Self) anyerror!void {
+    pub fn build(self: *Self, path: []const u8) anyerror!void {
         const number_of_textures: c_int = 1;
         const desired_channels: c_int = 0;
         const mipmap_level: c_int = 0;
@@ -47,17 +49,21 @@ pub const OpenGlTexture = struct {
         c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MIN_FILTER, c.GL_NEAREST);
         c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MAG_FILTER, c.GL_NEAREST);
 
-        var compressed_bytes: []const u8 = @embedFile("../../../assets/sprites/s_guy_idle.png");
-        const bytes_length: c_int = @intCast(c_int, compressed_bytes.len);
+        //var compressed_bytes: []const u8 = @embedFile("../../../assets/sprites/s_guy_idle.png");
+        var compressed_bytes: ?[]const u8 = fs.loadFile(path) catch |err| {
+            std.debug.print("[Texture]: Failed to load Texture at {s}! {}\n", .{ path, err });
+            return err;
+        };
+        const bytes_length: c_int = @intCast(c_int, compressed_bytes.?.len);
         // Determine if the file is a png file
-        if (c.stbi_info_from_memory(compressed_bytes.ptr, bytes_length, &self.width, &self.height, null) == 0) {
+        if (c.stbi_info_from_memory(compressed_bytes.?.ptr, bytes_length, &self.width, &self.height, null) == 0) {
             return error.NotPngFile;
         }
 
         // Ensure that the image has pixel data
         if (self.width <= 0 or self.height <= 0) return error.NoPixels;
 
-        if (c.stbi_is_16_bit_from_memory(compressed_bytes.ptr, bytes_length) != 0) {
+        if (c.stbi_is_16_bit_from_memory(compressed_bytes.?.ptr, bytes_length) != 0) {
             return error.InvalidFormat;
         }
 
@@ -69,7 +75,7 @@ pub const OpenGlTexture = struct {
 
         c.stbi_set_flip_vertically_on_load(1);
 
-        const image_data = c.stbi_load_from_memory(compressed_bytes.ptr, bytes_length, &self.width, &self.height, null, channel_count);
+        const image_data = c.stbi_load_from_memory(compressed_bytes.?.ptr, bytes_length, &self.width, &self.height, null, channel_count);
 
         if (image_data == null) return error.NoMem;
 
@@ -77,7 +83,6 @@ pub const OpenGlTexture = struct {
         self.data = image_data[0 .. height * pitch];
 
         // Generate gl texture
-
         c.glTexImage2D(
             c.GL_TEXTURE_2D, // Texture Target
             mipmap_level, // mipmap detail level
@@ -92,15 +97,18 @@ pub const OpenGlTexture = struct {
 
         // Generate mipmap
         c.glGenerateMipmap(c.GL_TEXTURE_2D);
+
+        c.stbi_image_free(self.data.ptr);
     }
 
     /// Frees the allocated memory that OpenGlTexture required to function. 
     pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
-        c.stbi_image_free(self.data.ptr);
+        //c.stbi_image_free(self.data.ptr);
+        c.glDeleteTextures(1, @ptrCast(*c_uint, &self.id));
     }
 
     /// Returns the OpenGL generated texture id
-    pub fn id(self: *Self) c_uint {
+    pub fn getId(self: *Self) c_uint {
         if (self.id == 0) @panic("[Renderer][OpenGL]: Texture ID of 0 is NOT valid!");
         return self.id;
     }
@@ -108,10 +116,10 @@ pub const OpenGlTexture = struct {
 
 /// Allocates and builds the Opengl Texture implementation
 /// Comments: The dross-zig Texture owns the Texture
-pub fn buildOpenGlTexture(allocator: *std.mem.Allocator) anyerror!*OpenGlTexture {
+pub fn buildOpenGlTexture(allocator: *std.mem.Allocator, path: []const u8) anyerror!*OpenGlTexture {
     var internal_texture: *OpenGlTexture = try allocator.create(OpenGlTexture);
 
-    try internal_texture.build();
+    try internal_texture.build(path);
 
     return internal_texture;
 }

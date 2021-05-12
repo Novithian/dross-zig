@@ -31,6 +31,9 @@ var app: *Application = undefined;
 var quad_position: Vector3 = undefined;
 var quad_position_two: Vector3 = undefined;
 
+var quad_texture: *Texture = undefined;
+var quad_texture_two: *Texture = undefined;
+
 pub fn main() anyerror!u8 {
 
     // create a general purpose allocator
@@ -59,8 +62,16 @@ pub fn main() anyerror!u8 {
     defer app.*.free();
 
     // Setup
+    const guy_one_texture_op = try ResourceHandler.loadTexture("guy_idle", "assets/sprites/s_guy_idle.png");
+    quad_texture = guy_one_texture_op orelse return error.FailedToLoadTexture; 
+
+    const guy_two_texture_op = try ResourceHandler.loadTexture("enemy_01_idle", "assets/sprites/s_enemy_01_idle.png");
+    quad_texture_two = guy_two_texture_op orelse return error.FailedToLoadTexture; 
+
+
+
     quad_position = Vector3.zero();
-    quad_position_two = Vector3.new(1.0, 0.5, 0.0);
+    quad_position_two = Vector3.new(1.0, 0.5, 1.0);
 
     // Begin the game loop
     app.*.run();
@@ -69,18 +80,19 @@ pub fn main() anyerror!u8 {
 }
 // Defined what game-level tick/update logic you want to control in the game.
 pub export fn update(delta: f64) void {
+    const delta32 = @floatCast(f32, delta);
     var input_horizontal = Input.getKeyPressedValue(DrossKey.KeyD) - Input.getKeyPressedValue(DrossKey.KeyA);
     var input_vertical = Input.getKeyPressedValue(DrossKey.KeyW) - Input.getKeyPressedValue(DrossKey.KeyS);
 
     quad_position = quad_position.add( //
         Vector3.new( //
-        input_horizontal * @floatCast(f32, delta), //
-        input_vertical * @floatCast(f32, delta), //
+        input_horizontal * delta32, //
+        input_vertical * delta32, //
         0.0, //
     ));
 }
 
 pub export fn render() void {
-    Renderer.drawQuad(quad_position_two);
-    Renderer.drawQuad(quad_position);
+    Renderer.drawTexturedQuad(quad_texture_two.*.getId(), quad_position_two);
+    Renderer.drawTexturedQuad(quad_texture.*.getId(), quad_position);
 }

@@ -38,7 +38,7 @@ pub const Camera2d = struct {
     /// The target position the camera should be focusing on
     target_position: Vector3,
     /// Level of zoom
-    zoom: f32 = 1.0,
+    zoom: f32 = 0.4,
     /// Determines how close something can be before getting clipped
     near: f32 = 0.0,
     /// Determines how far something can be before getting clipped
@@ -53,7 +53,7 @@ pub const Camera2d = struct {
     /// Setups the camera
     pub fn build(self: *Self) void {
         self.target_position = Vector3.new(0.0, 0.0, 0.0);
-        self.zoom = 1.0;
+        self.zoom = 0.2;
         self.near = 0.01;
         self.far = 100.0;
         self.speed = 2.0;
@@ -72,6 +72,7 @@ pub const Camera2d = struct {
 
     /// Sets the zoom level to the desired `zoom`
     pub fn setZoom(self: *Self, zoom: f32) void {
+        if (zoom <= 0.0) return;
         self.zoom = zoom;
     }
 
