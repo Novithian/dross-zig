@@ -2,7 +2,7 @@
 const c = @import("../../c_global.zig").c_imp;
 const std = @import("std");
 // dross-zig
-const app = @import("../../core/application.zig");
+const Application = @import("../../core/application.zig").Application;
 const Matrix4 = @import("../../core/matrix4.zig").Matrix4;
 const Vector3 = @import("../../core/vector3.zig").Vector3;
 
@@ -54,10 +54,18 @@ pub const Camera2d = struct {
     pub fn build(self: *Self) void {
         self.target_position = Vector3.new(0.0, 0.0, 0.0);
         self.zoom = 0.2;
+        // self.zoom = 61.0;
+        // self.zoom = 1.0;
         self.near = 0.01;
         self.far = 100.0;
-        self.speed = 2.0;
-        self.position = Vector3.new(0.0, 0.0, 0.0);
+        self.speed = 20.0;
+        const window_size = Application.getWindowSize();
+        self.position = Vector3.new(
+            0.5 * self.zoom, 
+            0.5 * self.zoom, 
+            0.0,
+        );
+        // self.position = Vector3.zero();
     }
 
     /// Ensures to reduce the camera cound and removes the camera from the cameras list
@@ -72,7 +80,8 @@ pub const Camera2d = struct {
 
     /// Sets the zoom level to the desired `zoom`
     pub fn setZoom(self: *Self, zoom: f32) void {
-        if (zoom <= 0.0) return;
+        // if (zoom <= 0.0) return;
+        std.debug.print("Zoom: {d}\n", .{self.zoom});
         self.zoom = zoom;
     }
 

@@ -8,7 +8,13 @@
 - Wrapper for zalgebra vec4
 - Pixel snap
 
+### Renderer ###
+
 ### Texture ###
+
+### Sprite ###
+- Sprite origin ( Not really working yet )
+- Sorting Orderer
 
 ### Input ###
 - Mouse manage state to detect down
@@ -22,7 +28,19 @@
 ### Text Rendering ###
 - self-explanatory
 
+### Window ###
+- Wrapper for window
+
 ## **LOG** ##
+- **[05-12-2021]**
+    - Create Sprite structure
+    - Replace any texture loading instances that are using it as a sprite with an actual sprite.
+    - create a drawSprite function in the renderer to make it far quicker
+    - Create a set of uniform helpers that'll take the location and data pointer
+    - Sprite color
+    - Sprite scaling
+    - Create a lerp for f32s
+    - rotation
 - **[05-11-2021]**
 	- File loader util
     - ResourceHandler

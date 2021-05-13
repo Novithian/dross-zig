@@ -22,17 +22,20 @@ usingnamespace Dross;
 
 // Application Infomation
 const APP_TITLE = "Dross-Zig Application";
-const APP_WIDTH = 1280;
-const APP_HEIGHT = 720;
+const APP_WIDTH = 1920 ;
+const APP_HEIGHT = 1080;
 
 //
 var app: *Application = undefined;
+var camera: *Camera2d = undefined;
 
 var quad_position: Vector3 = undefined;
 var quad_position_two: Vector3 = undefined;
+var indicator_position: Vector3 = undefined;
 
-var quad_texture: *Texture = undefined;
-var quad_texture_two: *Texture = undefined;
+var quad_sprite: *Sprite = undefined;
+var quad_sprite_two: *Sprite = undefined;
+var indicator_sprite: *Sprite = undefined;
 
 pub fn main() anyerror!u8 {
 
@@ -62,16 +65,31 @@ pub fn main() anyerror!u8 {
     defer app.*.free();
 
     // Setup
-    const guy_one_texture_op = try ResourceHandler.loadTexture("guy_idle", "assets/sprites/s_guy_idle.png");
-    quad_texture = guy_one_texture_op orelse return error.FailedToLoadTexture; 
+    const camera_op = getCurrentCamera();
+    camera = camera_op orelse return CameraError.CameraNotFound;
 
-    const guy_two_texture_op = try ResourceHandler.loadTexture("enemy_01_idle", "assets/sprites/s_enemy_01_idle.png");
-    quad_texture_two = guy_two_texture_op orelse return error.FailedToLoadTexture; 
+    quad_sprite = try buildSprite(&gpa.allocator, "guy_idle", "assets/sprites/s_guy_idle.png");
+    quad_sprite_two = try buildSprite(&gpa.allocator, "enemy_01_idle", "assets/sprites/s_enemy_01_idle.png");
+    indicator_sprite = try buildSprite(&gpa.allocator, "indicator", "assets/sprites/s_ui_indicator.png");
 
+    // quad_sprite_two.*.setOrigin(Vector2.new(7.0, 14.0));
+    // indicator_sprite.*.setOrigin(Vector2.new(4.0, 6.0));
+    // indicator_sprite.*.setAngle(30.0);
 
+    defer gpa.allocator.destroy(quad_sprite);
+    defer gpa.allocator.destroy(quad_sprite_two);
+    defer gpa.allocator.destroy(indicator_sprite);
+
+    defer quad_sprite.*.free(&gpa.allocator);
+    defer quad_sprite_two.*.free(&gpa.allocator);
+    defer indicator_sprite.*.free(&gpa.allocator);
+    
 
     quad_position = Vector3.zero();
-    quad_position_two = Vector3.new(1.0, 0.5, 1.0);
+    // quad_position_two = Vector3.zero();
+    // indicator_position = Vector3.zero();
+    quad_position_two = Vector3.new(2.0, 0.0, 0.0);
+    indicator_position = Vector3.new(-2.0, 0.0, 0.0);
 
     // Begin the game loop
     app.*.run();
@@ -81,18 +99,43 @@ pub fn main() anyerror!u8 {
 // Defined what game-level tick/update logic you want to control in the game.
 pub export fn update(delta: f64) void {
     const delta32 = @floatCast(f32, delta);
+    const speed: f32 = 10.0 * delta32;
+    const rotational_speed = 100.0 * delta32;
+    const movement_smoothing = 0.6;
     var input_horizontal = Input.getKeyPressedValue(DrossKey.KeyD) - Input.getKeyPressedValue(DrossKey.KeyA);
     var input_vertical = Input.getKeyPressedValue(DrossKey.KeyW) - Input.getKeyPressedValue(DrossKey.KeyS);
 
-    quad_position = quad_position.add( //
+    const target_position =quad_position.add( //
         Vector3.new( //
-        input_horizontal * delta32, //
-        input_vertical * delta32, //
+        input_horizontal * speed, //
+        input_vertical * speed, //
         0.0, //
     ));
+
+    quad_position = quad_position.lerp(target_position, movement_smoothing);
+    
+
+    const quad_old_angle = quad_sprite_two.*.getAngle();
+    const indicator_old_angle = indicator_sprite.*.getAngle();
+
+    // quad_sprite_two.setAngle(quad_old_angle + rotational_speed);
+    // indicator_sprite.setAngle(indicator_old_angle + rotational_speed);
+
+    const window_size = Application.getWindowSize();
+    const zoom = camera.*.getZoom();
+    const old_camera_position = camera.*.getPosition();
+    const camera_smoothing = 0.075;
+
+    const new_camera_position = Vector3.new(    
+        lerp(old_camera_position.getX(), -quad_position.getX(), camera_smoothing), 
+        lerp(old_camera_position.getY(), -quad_position.getY(), camera_smoothing), 
+        0.0,
+    );
+    camera.*.setPosition(new_camera_position);
 }
 
 pub export fn render() void {
-    Renderer.drawTexturedQuad(quad_texture_two.*.getId(), quad_position_two);
-    Renderer.drawTexturedQuad(quad_texture.*.getId(), quad_position);
+    Renderer.drawSprite(quad_sprite, quad_position);
+    Renderer.drawSprite(quad_sprite_two, quad_position_two);
+    Renderer.drawSprite(indicator_sprite, indicator_position);
 }

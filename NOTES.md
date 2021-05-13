@@ -1,6 +1,6 @@
 ## NOTES ##
 - Currently working on OpenGL backend
-
+- CHECK assets/shaders TO SEE IF IT WAS UPDATED!
 
 
 ## TERMINOLOGY ##

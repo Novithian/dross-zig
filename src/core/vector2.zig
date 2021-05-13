@@ -3,6 +3,7 @@ const std = @import("std");
 const za = @import("zalgebra");
 const Vec2 = za.vec2;
 // dross-zig
+// -----------------------------------------
 
 // -----------------------------------------
 //      - Vector2 -
@@ -21,13 +22,13 @@ pub const Vector2 = struct {
     }
 
     /// Returns the value of the x component
-    pub fn x(self: Self) f32 {
-        return data.x;
+    pub fn getX(self: Self) f32 {
+        return self.data.x;
     }
 
     /// Returns the value of the y component
-    pub fn y(self: Self) f32 {
-        return data.y;
+    pub fn getY(self: Self) f32 {
+        return self.data.y;
     }
 
     /// Builds and returns a Vector2 with all components

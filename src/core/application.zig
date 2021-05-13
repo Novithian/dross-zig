@@ -116,7 +116,6 @@ pub const Application = struct {
         try cam.buildCamera2d(allocator);
 
         try Input.build(allocator);
-
     }
 
     /// Gracefully terminates the Application by cleaning up
@@ -167,15 +166,16 @@ pub const Application = struct {
             var camera_pos = camera.getPosition();
             const camera_zoom = camera.getZoom();
             var delta_pos = Vector3.zero();
-            const camera_speed = camera.getSpeed() * @floatCast(f32, delta);
+            const delta32: f32 = @floatCast(f32, delta);
+            const camera_speed = camera.getSpeed() * delta32;
 
             // Zoom in
             if (Input.getKeyPressed(DrossKey.KeyU)) {
-                camera.setZoom(camera_zoom - camera_speed);
+                camera.setZoom(camera_zoom - delta32);
             }
             // Zoom out
             if (Input.getKeyPressed(DrossKey.KeyI)) {
-                camera.setZoom(camera_zoom + camera_speed);
+                camera.setZoom(camera_zoom + delta32);
             }
             // Right
             if (Input.getKeyPressed(DrossKey.KeyL)) {
@@ -213,6 +213,7 @@ pub const Application = struct {
     pub fn resize(self: *Application, x: c_int, y: c_int, width: c_int, height: c_int) void {
         // Call renderer's resize method
         gfx.Renderer.resizeViewport(x, y, width, height);
+        setWindowSize(@intToFloat(f32, width), @intToFloat(f32, height));
     }
 
     /// Sets the application's window title
@@ -224,6 +225,16 @@ pub const Application = struct {
     pub fn getWindow() *c.GLFWwindow {
         return window;
     }
+
+    /// Returns the size of the application's window as a Vector2
+    pub fn getWindowSize() Vector2 {
+        return window_size;
+    }
+
+    pub fn setWindowSize(width: f32, height: f32) void {
+        window_size = Vector2.new(width, height);
+    }
+
 };
 
 /// Allocated and builds the constituent components of an Application.

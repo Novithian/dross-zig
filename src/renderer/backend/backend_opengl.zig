@@ -7,33 +7,37 @@ const za = @import("zalgebra");
 const Color = @import("../../core/core.zig").Color;
 const texture = @import("../texture.zig");
 const TextureId = texture.TextureId;
+const Sprite = @import("../sprite.zig").Sprite;
 const Camera = @import("../cameras/camera_2d.zig");
 const Matrix4 = @import("../../core/matrix4.zig").Matrix4;
 const Vector3 = @import("../../core/vector3.zig").Vector3;
 const fs = @import("../../utils/file_loader.zig");
 const rh = @import("../../core/resource_handler.zig");
+const Application = @import("../../core/application.zig").Application;
 
 // Testing vertices and indices
 // zig fmt: off
-const square_vertices: [32]f32 = [32]f32{
-    // Positions        | Colors        | Texture coords
-    0.5, 0.5, 0.0,      1.0, 0.0, 0.0,  1.0, 1.0, // Top Right
-    0.5, -0.5, 0.0,     0.0, 1.0, 0.0,  1.0, 0.0,// Bottom Right
-    -0.5, -0.5, 0.0,    0.0, 0.0, 1.0,  0.0, 0.0,// Bottom Left
-    -0.5, 0.5, 0.0,     1.0, 1.0, 1.0,  0.0, 1.0,// Top Left
-};
+const square_vertices: [20]f32 = [20]f32{
+    // Positions  / Texture coords
+    // 1.0, 1.0, 0.0,  1.0, 1.0, // Top Right
+    // 1.0, 0.0, 0.0,  1.0, 0.0,// Bottom Right
+    // 0.0, 0.0, 0.0,  0.0, 0.0,// Bottom Left
+    // 0.0, 1.0, 0.0,  0.0, 1.0,// Top Left
 
+    0.0, 0.0, 0.0,  0.0, 0.0, // Bottom Left
+    1.0, 0.0, 0.0,  1.0, 0.0,// Bottom Right
+    1.0, 1.0, 0.0,  1.0, 1.0,// Top Right
+    0.0, 1.0, 0.0,  0.0, 1.0,// Top Left
+};
+//[0  3]
+//[2  1]
 const square_indices: [6]c_uint = [6]c_uint{
-    0, 1, 3,
-    1, 2, 3,
+    // 0, 1, 3,
+    // 1, 2, 3,
+    0, 1, 2,
+    2, 3, 0
 };
 
-const square_tex_coords: [8]f32 = [8]f32{
-    0.0, 0.0, // Bottom left
-    1.0, 0.0, // Bottom right
-    1.0, 1.0, // Top right
-    0.0, 1.0, // Top left
-};
 
 // -----------------------------------------
 //      - OpenGL Reference Material -
@@ -73,6 +77,7 @@ pub const OpenGlBackend = struct {
     index_buffer: ?*GlIndexBuffer,
 
     clear_color: Color,
+    default_draw_color: Color,
 
     debug_texture: ?*texture.Texture,
 
@@ -90,6 +95,7 @@ pub const OpenGlBackend = struct {
 
         // Enable depth testing
         c.glEnable(c.GL_DEPTH_TEST);
+        c.glBlendFunc(c.GL_SRC_ALPHA, c.GL_ONE_MINUS_SRC_ALPHA);
 
         // Allocate and compile the vertex shader
         var vertex_shader: *GlShader = try buildGlShader(allocator, GlShaderType.Vertex);
@@ -138,16 +144,14 @@ pub const OpenGlBackend = struct {
         var indicies_slice = square_indices[0..];
         self.index_buffer.?.data(indicies_slice, GlBufferUsage.StaticDraw);
 
-        const size_of_vatb = 8;
+        const size_of_vatb = 5;
         const stride = @intCast(c_longlong, @sizeOf(f32) * size_of_vatb);
         const offset_position: u32 = 0;
-        const offset_color: u32 = 3 * @sizeOf(f32);
-        const offset_tex: u32 =  6 * @sizeOf(f32); // position offset(0) + color offset + the length of the color bytes
+        const offset_tex: u32 =  3 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
         const index_zero: c_int = 0;
         const index_one: c_int = 1;
-        const index_two: c_int = 2;
-        const size: c_uint = 3;
-        const tex_coord_size: c_uint = 2;
+        const size_position: c_uint = 3;
+        const size_tex_coords: c_uint = 2;
 
         // Tells OpenGL how to interpret the vertex data(per vertex attribute)
         // Uses the data to the currently bound VBO
@@ -155,7 +159,7 @@ pub const OpenGlBackend = struct {
         // Position Attribute
         c.glVertexAttribPointer(
             index_zero, // Which vertex attribute we want to configure
-            size, // Size of vertex attribute (vec3 in this case)
+            size_position, // Size of vertex attribute (vec3 in this case)
             c.GL_FLOAT, // Type of data
             c.GL_FALSE, // Should the data be normalized?
             stride, // Stride
@@ -165,23 +169,10 @@ pub const OpenGlBackend = struct {
         // Vertex Attributes are disabled by default, we need to enable them.
         c.glEnableVertexAttribArray(index_zero);
 
-        // Color Attribute
-        c.glVertexAttribPointer(
-            index_one, // Which vertex attribute we want to configure
-            size, // Size of vertex attribute (vec3 in this case)
-            c.GL_FLOAT, // Type of data
-            c.GL_FALSE, // Should the data be normalized?
-            stride, // Stride
-            @intToPtr(?*c_void, offset_color), // Offset
-        );
-
-        // Enable Color Attributes
-        c.glEnableVertexAttribArray(index_one);
-        
         // Texture Coordinates Attribute
         c.glVertexAttribPointer(
-            index_two, // Which vertex attribute we want to configure
-            tex_coord_size, // Size of vertex attribute (vec2 in this case)
+            index_one, // Which vertex attribute we want to configure
+            size_tex_coords, // Size of vertex attribute (vec2 in this case)
             c.GL_FLOAT, // Type of data
             c.GL_FALSE, // Should the data be normalized?
             stride, // Stride
@@ -189,7 +180,7 @@ pub const OpenGlBackend = struct {
         );
 
         // Enable Color Attributes
-        c.glEnableVertexAttribArray(index_two);
+        c.glEnableVertexAttribArray(index_one);
 
         // Unbind the VBO
         c.glBindBuffer(c.GL_ARRAY_BUFFER, index_zero);
@@ -204,7 +195,8 @@ pub const OpenGlBackend = struct {
 
         // Set the clear color
         self.clear_color = Color.rgb(0.2, 0.2, 0.2);
-
+        self.default_draw_color = Color.rgb(1.0, 1.0, 1.0);
+ 
         // TODO(devon): remove 
         // For debug purposes only
         const debug_texture_op = try rh.ResourceHandler.loadTexture("default_texture", "assets/textures/t_default.png");
@@ -243,44 +235,66 @@ pub const OpenGlBackend = struct {
         const camera_zoom = camera.getZoom();
 
         // Set up projection matrix
-        const projection = Matrix4.identity().scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
+        // const projection = Matrix4.identity().scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
+        const window_size = Application.getWindowSize();
+        const aspect_ratio_w = window_size.getX() / window_size.getY();
+        const aspect_ratio_h = window_size.getY() / window_size.getX();
 
+        // Works well enough
+        const projection = Matrix4.orthographic(
+            -aspect_ratio_w, // Left
+            aspect_ratio_w, // Right
+            -aspect_ratio_h, // bottom
+            aspect_ratio_h, // top
+            -1.0, //Near
+            1.0, // Far
+        ); 
+
+        // const projection = Matrix4.orthographic(
+        //     0, // Left
+        //     window_size.getX(), // Right
+        //     window_size.getY(), // bottom
+        //     0, // top
+        //     -1.0, //Near
+        //     1.0, // Far
+        // ); 
+
+        // const projection = Matrix4.orthographic(
+        //     0.0, // Left
+        //     window_size.getX(), // Right
+        //     0.0, // bottom
+        //     window_size.getY(), // top
+        //     -1.0, //Near
+        //     1.0, // Far
+        // ); 
+
+        // const projection = Matrix4.orthographic(
+        //     0.0, // Left
+        //     window_size.getX() * camera_zoom, // Right
+        //     0.0, // bottom
+        //     window_size.getY() * camera_zoom, // top
+        //     -1.0, //Near
+        //     1.0, // Far
+        // ); 
+     
         // Set up the view matrix
-        //const view = Matrix4.lookAt(camera_pos, Vector3.forward().scale(-1.0), Vector3.up());
-        const view = Matrix4.fromTranslate(camera_pos);
+        // const view = Matrix4.fromTranslate(camera_pos).scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
+        var view = Matrix4.fromTranslate(camera_pos).scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
 
-        const projection_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "projection");
-        const view_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "view");
-
-        c.glUniformMatrix4fv(
-            projection_location,  // Location
-            1,                  // count
-            c.GL_FALSE,         // transpose from column-major to row-major
-            @ptrCast(*const f32, &projection.data)// data
-        );
-
-        c.glUniformMatrix4fv(
-            view_location,  // Location
-            1,                  // count
-            c.GL_FALSE,         // transpose from column-major to row-major
-            @ptrCast(*const f32, &view.data)// data
-        );
+        self.shader_program.?.setMatrix4("projection", projection);
+        self.shader_program.?.setMatrix4("view", view);
     }
         
     /// Sets up renderer to be able to draw a untextured quad.
     pub fn drawQuad(self: *Self, position: Vector3) void {
          // Bind Texture
         c.glBindTexture(c.GL_TEXTURE_2D, self.debug_texture.?.getGlId());
+
         // Translation * Rotation * Scale
         const transform = Matrix4.fromTranslate(position);
-        
-        const model_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "model");
-        c.glUniformMatrix4fv(
-            model_location,  // Location
-            1,                  // count
-            c.GL_FALSE,         // transpose from column-major to row-major
-            @ptrCast(*const f32, &transform.data)// data
-        );
+
+        self.shader_program.?.setMatrix4("model", transform);
+        self.shader_program.?.setFloat3("sprite_color", self.default_draw_color.r, self.default_draw_color.g, self.default_draw_color.b);
 
         // Bind the VAO
         self.vertex_array.?.bind();
@@ -295,13 +309,68 @@ pub const OpenGlBackend = struct {
         // Translation * Rotation * Scale
         const transform = Matrix4.fromTranslate(position);
         
-        const model_location: c_int = c.glGetUniformLocation(self.shader_program.?.handle, "model");
-        c.glUniformMatrix4fv(
-            model_location,  // Location
-            1,                  // count
-            c.GL_FALSE,         // transpose from column-major to row-major
-            @ptrCast(*const f32, &transform.data)// data
+        self.shader_program.?.setMatrix4("model", transform);
+        self.shader_program.?.setFloat3("sprite_color", self.default_draw_color.r, self.default_draw_color.g, self.default_draw_color.b);
+
+
+        // Bind the VAO
+        self.vertex_array.?.bind();
+        
+        self.drawIndexed(self.vertex_array.?);
+    }
+
+    /// Sets up renderer to be able to draw a Sprite.
+    pub fn drawSprite(self: *Self, sprite: *Sprite, position: Vector3) void {
+        const texture_id_op = sprite.getTextureId();
+        const texture_id = texture_id_op orelse {
+            self.drawQuad(position);
+            return;
+        };
+        const sprite_color = sprite.getColor();
+        const sprite_scale = Vector3.fromVector2(sprite.getScale(), 1.0);
+        const sprite_size_op = sprite.getSize();
+        const sprite_size = sprite_size_op orelse return;
+        // In pixels
+        const sprite_origin = sprite.getOrigin();
+        // In degrees
+        const sprite_angle = sprite.getAngle();
+
+        // Activate Texture slot and bind Texture
+        c.glActiveTexture(c.GL_TEXTURE0);
+        c.glBindTexture(c.GL_TEXTURE_2D, texture_id.id_gl);
+
+        // Translation * Rotation * Scale
+
+        // Translation
+        var model = Matrix4.fromTranslate(position);
+
+        // Rotation
+        const texture_coords_x = sprite_origin.getX() / sprite_size.getX();
+        const texture_coords_y = sprite_origin.getY() / sprite_size.getY();
+        const model_to_origin = Vector3.new(
+            texture_coords_x,
+            texture_coords_y,
+            0.0,
         );
+        
+        const origin_to_model = Vector3.new(
+            -texture_coords_x,
+            -texture_coords_y,
+            0.0,
+        );
+
+        // Translate to the selected origin
+        model = model.translate(model_to_origin);
+        // Perform the rotation
+        model = model.rotate(sprite_angle, Vector3.forward());
+        // Translate back
+        model = model.translate(origin_to_model);
+
+        // Scaling
+        model = model.scale(sprite_scale);
+
+        self.shader_program.?.setMatrix4("model", model);
+        self.shader_program.?.setVector3("sprite_color", sprite_color.toVector3());
 
         // Bind the VAO
         self.vertex_array.?.bind();
@@ -311,7 +380,6 @@ pub const OpenGlBackend = struct {
 
     /// Draws geometry with a index buffer
     pub fn drawIndexed(self: *Self, vertex_array: *GlVertexArray) void {
-        const number_of_vertices: i32 = 6;
         const offset = @intToPtr(?*c_void, 0);
 
         // Draw 
@@ -625,6 +693,41 @@ const GlShaderProgram = struct {
         const uniform_location = c.glGetUniformLocation(self.handle, &name.ptr);
         c.glUniform1f(uniform_location, value);
     }
+
+    /// Sets a uniform vec3 of `name` to the corresponding values of the group of 3 floats
+    pub fn setFloat3(self: *Self, name: [*c]const u8, x: f32, y: f32, z: f32) void {
+        const uniform_location = c.glGetUniformLocation(self.handle, name);
+        c.glUniform3f(uniform_location, x, y, z);
+    }
+
+    /// Sets a uniform vec3 of `name` to the corresponding values of the group of 3 floats
+    pub fn setVector3(self: *Self, name: [*c]const u8, vector: Vector3) void {
+        const uniform_location: c_int = c.glGetUniformLocation(self.handle, name);
+        const data = vector.data.to_array();
+        const gl_error = c.glGetError();
+        if(gl_error != c.GL_NO_ERROR){
+            std.debug.print("{}\n", .{gl_error});
+
+        }
+        c.glUniform3fv(
+            uniform_location,           // Location
+            1,                          // Count
+            @ptrCast(*const f32, &data[0]), // Data
+        );
+    }
+    
+    /// Sets a uniform mat4 of `name` to the requested `value`
+    pub fn setMatrix4(self: *Self, name: [*c]const u8, matrix: Matrix4) void {
+        const uniform_location = c.glGetUniformLocation(self.handle, name);
+        c.glUniformMatrix4fv(
+            uniform_location,   // Location
+            1,                  // Count
+            c.GL_FALSE,         // Transpose
+            @ptrCast(*const f32, &matrix.data.data) // Data pointer
+        );
+        
+    }
+ 
 };
 
 /// Allocates an GlShaderProgram and sets it up

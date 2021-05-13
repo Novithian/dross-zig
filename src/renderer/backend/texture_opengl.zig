@@ -34,6 +34,8 @@ pub const OpenGlTexture = struct {
         const desired_channels: c_int = 0;
         const mipmap_level: c_int = 0;
         const border: c_int = 0;
+        
+        c.stbi_set_flip_vertically_on_load(1);
 
         // Generate texture ID
         c.glGenTextures(number_of_textures, @ptrCast(*c_uint, &self.id));
@@ -73,7 +75,6 @@ pub const OpenGlTexture = struct {
         const width = @intCast(u32, self.width);
         const height = @intCast(u32, self.height);
 
-        c.stbi_set_flip_vertically_on_load(1);
 
         const image_data = c.stbi_load_from_memory(compressed_bytes.?.ptr, bytes_length, &self.width, &self.height, null, channel_count);
 

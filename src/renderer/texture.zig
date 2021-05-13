@@ -6,6 +6,7 @@ const gl = @import("backend/texture_opengl.zig");
 const Color = @import("../core/core.zig").Color;
 const renderer = @import("renderer.zig");
 const selected_api = @import("renderer.zig").api;
+const Vector2 = @import("../core/vector2.zig").Vector2;
 
 // -----------------------------------------
 //      - Texture -
@@ -69,6 +70,23 @@ pub const Texture = struct {
     /// Returns the OpenGL generated texture ID
     pub fn getGlId(self: *Self) c_uint {
         return self.gl_texture.?.getId();
+    }
+
+    /// Returns the size of the Texture
+    pub fn getSize(self: *Self) ?Vector2 {
+        switch(selected_api) {
+            renderer.BackendApi.OpenGl => {
+                const width: f32 = @intToFloat(f32, self.gl_texture.?.width);
+                const height: f32 = @intToFloat(f32, self.gl_texture.?.height);
+                return Vector2.new(width, height);
+            },
+            renderer.BackendApi.Dx12 => {
+                return null;
+            },
+            renderer.BackendApi.Vulkan => {
+                return null;
+            },
+        }
     }
 };
 

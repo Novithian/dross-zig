@@ -29,10 +29,10 @@ pub const ResourceHandler = struct {
 
     /// Frees the ResourceHandler and deallocates and required memory.
     pub fn free() void {
-        //TODO(devon): loop through and free all textures 
+        //TODO(devon): loop through and free all textures
         var iterator = texture_map.iterator();
-        
-        while(iterator.next()) | entry | {
+
+        while (iterator.next()) |entry| {
             unloadTexture(entry.key);
         }
 
@@ -45,8 +45,8 @@ pub const ResourceHandler = struct {
     /// by the ResourceHandler. The returned Texture pointer is owned and 
     /// released by the ResourceHandler.
     pub fn loadTexture(name: []const u8, path: []const u8) !?*Texture.Texture {
-        var texture: *Texture.Texture = Texture.buildTexture(resource_allocator, name, path) catch | err | {
-            std.debug.print("[Resource Handler]: Error occurred when loading texture({s})! {}\n", .{path, err});
+        var texture: *Texture.Texture = Texture.buildTexture(resource_allocator, name, path) catch |err| {
+            std.debug.print("[Resource Handler]: Error occurred when loading texture({s})! {}\n", .{ path, err });
             return err;
         };
         try texture_map.put(name, texture);
@@ -69,7 +69,6 @@ pub const ResourceHandler = struct {
     /// by the ResourceHandler. The returned font pointer is owned and 
     /// released by the ResourceHandler.
     pub fn loadFont(path: []const u8) ?*Texture {}
-
 
     pub fn unloadFont() void {}
 };

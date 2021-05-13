@@ -5,7 +5,9 @@ const za = @import("zalgebra");
 
 // dross-zig
 const gl = @import("backend/backend_opengl.zig");
+const Application = @import("../core/application.zig").Application;
 const TextureId = @import("texture.zig").TextureId;
+const Sprite = @import("sprite.zig").Sprite;
 const Color = @import("../core/core.zig").Color;
 const Camera = @import("../renderer/cameras/camera_2d.zig");
 const EventLoop = @import("../core/event_loop.zig");
@@ -125,6 +127,17 @@ pub const Renderer = struct {
             BackendApi.Vulkan => {},
         }
     }
+    
+    /// Sets up renderer to be able to draw a Sprite.
+    pub fn drawSprite(sprite: *Sprite, position: Vector3) void {
+        switch (api) {
+            BackendApi.OpenGl => {
+                renderer.gl_backend.?.drawSprite(sprite, position);
+            },
+            BackendApi.Dx12 => {},
+            BackendApi.Vulkan => {},
+        }
+    }
 
     /// Window resize callback for GLFW
     /// Comments: INTERNAL use only.
@@ -137,6 +150,7 @@ pub const Renderer = struct {
         switch (api) {
             BackendApi.OpenGl => {
                 c.glViewport(x_pos, y_pos, width, height);
+                Application.setWindowSize(@intToFloat(f32, width), @intToFloat(f32, height));
             },
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},

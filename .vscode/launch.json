@@ -15,6 +15,16 @@
             "environment": [],
             "preLaunchTask": "build",
             // "postDebugTask": "close terminal"
+        },
+        {
+            "name": "Zig Run",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-cache/bin/dross-zig.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "preLaunchTask": "build",
         }
     ]
 }
