@@ -97,7 +97,7 @@ pub const OpenGlTexture = struct {
         );
 
         // Generate mipmap
-        c.glGenerateMipmap(c.GL_TEXTURE_2D);
+        // c.glGenerateMipmap(c.GL_TEXTURE_2D);
 
         c.stbi_image_free(self.data.ptr);
     }

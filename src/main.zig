@@ -22,8 +22,8 @@ usingnamespace Dross;
 
 // Application Infomation
 const APP_TITLE = "Dross-Zig Application";
-const APP_WIDTH = 1920 ;
-const APP_HEIGHT = 1080;
+const APP_WIDTH = 1280 ;
+const APP_HEIGHT = 720;
 
 //
 var app: *Application = undefined;
@@ -73,7 +73,7 @@ pub fn main() anyerror!u8 {
     indicator_sprite = try buildSprite(&gpa.allocator, "indicator", "assets/sprites/s_ui_indicator.png");
 
     // quad_sprite_two.*.setOrigin(Vector2.new(7.0, 14.0));
-    // indicator_sprite.*.setOrigin(Vector2.new(4.0, 6.0));
+    indicator_sprite.*.setOrigin(Vector2.new(8.0, 11.0));
     // indicator_sprite.*.setAngle(30.0);
 
     defer gpa.allocator.destroy(quad_sprite);
@@ -99,7 +99,7 @@ pub fn main() anyerror!u8 {
 // Defined what game-level tick/update logic you want to control in the game.
 pub export fn update(delta: f64) void {
     const delta32 = @floatCast(f32, delta);
-    const speed: f32 = 10.0 * delta32;
+    const speed: f32 = 2.0 * delta32;
     const rotational_speed = 100.0 * delta32;
     const movement_smoothing = 0.6;
     var input_horizontal = Input.getKeyPressedValue(DrossKey.KeyD) - Input.getKeyPressedValue(DrossKey.KeyA);
@@ -115,23 +115,23 @@ pub export fn update(delta: f64) void {
     quad_position = quad_position.lerp(target_position, movement_smoothing);
     
 
-    const quad_old_angle = quad_sprite_two.*.getAngle();
-    const indicator_old_angle = indicator_sprite.*.getAngle();
+    // const quad_old_angle = quad_sprite_two.*.getAngle();
+    // const indicator_old_angle = indicator_sprite.*.getAngle();
 
-    // quad_sprite_two.setAngle(quad_old_angle + rotational_speed);
-    // indicator_sprite.setAngle(indicator_old_angle + rotational_speed);
+    // // quad_sprite_two.setAngle(quad_old_angle + rotational_speed);
+    // // indicator_sprite.setAngle(indicator_old_angle + rotational_speed);
 
-    const window_size = Application.getWindowSize();
-    const zoom = camera.*.getZoom();
-    const old_camera_position = camera.*.getPosition();
-    const camera_smoothing = 0.075;
+    // const window_size = Application.getWindowSize();
+    // const zoom = camera.*.getZoom();
+    // const old_camera_position = camera.*.getPosition();
+    // const camera_smoothing = 0.075;
 
-    const new_camera_position = Vector3.new(    
-        lerp(old_camera_position.getX(), -quad_position.getX(), camera_smoothing), 
-        lerp(old_camera_position.getY(), -quad_position.getY(), camera_smoothing), 
-        0.0,
-    );
-    camera.*.setPosition(new_camera_position);
+    // const new_camera_position = Vector3.new(    
+    //     lerp(old_camera_position.getX(), -quad_position.getX(), camera_smoothing), 
+    //     lerp(old_camera_position.getY(), -quad_position.getY(), camera_smoothing), 
+    //     0.0,
+    // );
+    // camera.*.setPosition(new_camera_position);
 }
 
 pub export fn render() void {
