@@ -6,6 +6,7 @@ const InternalTexture = @import("../texture.zig").InternalTexture;
 const TextureErrors = @import("../texture.zig").TextureErrors;
 const apis = @import("../renderer.zig").BackendApi;
 const fs = @import("../../utils/file_loader.zig");
+const Vector2 = @import("../../core/vector2.zig").Vector2;
 
 // -----------------------------------------
 //      - OpenGlTexture -
@@ -56,7 +57,9 @@ pub const OpenGlTexture = struct {
             std.debug.print("[Texture]: Failed to load Texture at {s}! {}\n", .{ path, err });
             return err;
         };
+
         const bytes_length: c_int = @intCast(c_int, compressed_bytes.?.len);
+
         // Determine if the file is a png file
         if (c.stbi_info_from_memory(compressed_bytes.?.ptr, bytes_length, &self.width, &self.height, null) == 0) {
             return error.NotPngFile;
@@ -102,10 +105,44 @@ pub const OpenGlTexture = struct {
         c.stbi_image_free(self.data.ptr);
     }
 
+    pub fn build_dataless(self: *Self, size: Vector2) !void {
+       
+        // Generate texture ID
+        c.glGenTextures(1, @ptrCast(*c_uint, &self.id));
+
+        // Bind the texture
+        c.glBindTexture(c.GL_TEXTURE_2D, self.id);
+
+        // Set texture parameters
+        c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MIN_FILTER, c.GL_NEAREST);
+        c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MAG_FILTER, c.GL_NEAREST);
+
+        self.width = @floatToInt(c_int, size.getX());
+        self.height = @floatToInt(c_int, size.getY());
+
+        // Generate gl texture
+        c.glTexImage2D(
+            c.GL_TEXTURE_2D, // Texture Target
+            0, // mipmap detail level
+            c.GL_RGB, // Specifies the number of color components in texture
+            self.width, // Width of image
+            self.height, // Height of image
+            0, // Boarde NOTE(devon): must be 0
+            c.GL_RGB, // Specifies the format of the pixel data
+            c.GL_UNSIGNED_BYTE, // Specifies the data type of the pixel data
+            null, // void pointer to image data
+        );
+    }
+
     /// Frees the allocated memory that OpenGlTexture required to function. 
     pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
         //c.stbi_image_free(self.data.ptr);
         c.glDeleteTextures(1, @ptrCast(*c_uint, &self.id));
+    }
+
+    /// Binds the texture
+    pub fn bind(self: *Self) void {
+        c.glBindTexture(c.GL_TEXTURE_2D, self.id);
     }
 
     /// Returns the OpenGL generated texture id
@@ -124,3 +161,14 @@ pub fn buildOpenGlTexture(allocator: *std.mem.Allocator, path: []const u8) anyer
 
     return internal_texture;
 }
+
+/// Allocates and builds  a dataless Opengl Texture implementation
+/// Comments: The dross-zig Texture owns the Texture
+pub fn buildDatalessOpenGlTexture(allocator: *std.mem.Allocator, size: Vector2) anyerror!*OpenGlTexture {
+    var internal_texture: *OpenGlTexture = try allocator.create(OpenGlTexture);
+
+    try internal_texture.build_dataless(size);
+
+    return internal_texture;
+}
+

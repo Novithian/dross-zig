@@ -11,9 +11,12 @@ const Sprite = @import("../sprite.zig").Sprite;
 const Camera = @import("../cameras/camera_2d.zig");
 const Matrix4 = @import("../../core/matrix4.zig").Matrix4;
 const Vector3 = @import("../../core/vector3.zig").Vector3;
+const Vector2 = @import("../../core/vector2.zig").Vector2;
 const fs = @import("../../utils/file_loader.zig");
 const rh = @import("../../core/resource_handler.zig");
 const Application = @import("../../core/application.zig").Application;
+const framebuffa = @import("../framebuffer.zig");
+const Framebuffer = framebuffa.Framebuffer;
 
 // Testing vertices and indices
 // zig fmt: off
@@ -38,6 +41,17 @@ const square_indices: [6]c_uint = [6]c_uint{
     2, 3, 0
 };
 
+// zig fmt: off
+const screenbuffer_vertices: [24]f32 = [24]f32{
+    // Positions  / Texture coords
+    -1.0,  1.0,     0.0, 1.0, // Bottom Left
+    -1.0, -1.0,     0.0, 0.0,// Bottom Right
+     1.0, -1.0,     1.0, 0.0,// Top Right
+
+    -1.0,  1.0,     0.0, 1.0,// Top Left
+     1.0, -1.0,     1.0, 0.0,// Top Left
+     1.0,  1.0,     1.0, 1.0,// Top Left
+};
 
 // -----------------------------------------
 //      - OpenGL Reference Material -
@@ -50,6 +64,9 @@ const square_indices: [6]c_uint = [6]c_uint{
 // -----------------------------------------
 const default_shader_vs: [:0]const u8 = "assets/shaders/default_shader.vs";
 const default_shader_fs: [:0]const u8 = "assets/shaders/default_shader.fs";
+const screenbuffer_shader_vs: [:0]const u8 = "assets/shaders/screenbuffer_shader.vs";
+const screenbuffer_shader_fs: [:0]const u8 = "assets/shaders/screenbuffer_shader.fs";
+
 
 // -----------------------------------------
 //      - OpenGL Errors -
@@ -71,17 +88,26 @@ pub const OpenGlError = error{
 /// Backend Implmentation for OpenGL
 /// Comments: This is for INTERNAL use only. 
 pub const OpenGlBackend = struct {
-    shader_program: ?*GlShaderProgram,
-    vertex_array: ?*GlVertexArray,
-    vertex_buffer: ?*GlVertexBuffer,
-    index_buffer: ?*GlIndexBuffer,
+    /// Default shader program for drawing the scene
+    shader_program: ?*GlShaderProgram = undefined,
+    /// Shader program for drawing the swapchain to the display
+    screenbuffer_program: ?*GlShaderProgram = undefined,
 
-    clear_color: Color,
-    default_draw_color: Color,
+    vertex_array: ?*GlVertexArray = undefined,
+    vertex_buffer: ?*GlVertexBuffer = undefined,
+    index_buffer: ?*GlIndexBuffer = undefined,
 
-    debug_texture: ?*texture.Texture,
+    screenbuffer_vertex_array: ?*GlVertexArray = undefined,
+    screenbuffer_vertex_buffer: ?*GlVertexBuffer = undefined,
 
-    projection_view: ?Matrix4,
+    clear_color: Color = undefined,
+    default_draw_color: Color = undefined,
+
+    debug_texture: ?*texture.Texture = undefined,
+
+    screenbuffer: ?*Framebuffer = undefined,
+
+    projection_view: ?Matrix4 = undefined,
 
     const Self = @This();
 
@@ -102,10 +128,23 @@ pub const OpenGlBackend = struct {
         try vertex_shader.source(default_shader_vs);
         try vertex_shader.compile();
 
+        // Allocate and compile the vertex shader for the screenbuffer
+        var screenbuffer_vertex_shader: *GlShader = try buildGlShader(allocator, GlShaderType.Vertex);
+        try screenbuffer_vertex_shader.source(screenbuffer_shader_vs);
+        try screenbuffer_vertex_shader.compile();
+
         // Allocate and compile the fragment shader
         var fragment_shader: *GlShader = try buildGlShader(allocator, GlShaderType.Fragment);
         try fragment_shader.source(default_shader_fs);
         try fragment_shader.compile();
+
+        // Allocate and compile the vertex shader for the screenbuffer
+        var screenbuffer_fragment_shader: *GlShader = try buildGlShader(allocator, GlShaderType.Fragment);
+        try screenbuffer_fragment_shader.source(screenbuffer_shader_fs);
+        try screenbuffer_fragment_shader.compile();
+        
+        // Default shader program setup
+        // ---------------------------------------------------
 
         // Allocate memory for the shader program
         self.shader_program = try buildGlShaderProgram(allocator);
@@ -125,10 +164,34 @@ pub const OpenGlBackend = struct {
         defer allocator.destroy(vertex_shader);
         defer allocator.destroy(fragment_shader);
 
+        // Screenbuffer shader program setup
+        // ----------------------------------------------------
+
+        // Allocate memory for the shader program
+        self.screenbuffer_program = try buildGlShaderProgram(allocator);
+
+        // Attach the shaders to the shader program
+        self.screenbuffer_program.?.attach(screenbuffer_vertex_shader);
+        self.screenbuffer_program.?.attach(screenbuffer_fragment_shader);
+
+        // Link the shader program
+        try self.screenbuffer_program.?.link();
+
+        // Allow the shader to call the OpenGL-related cleanup functions
+        screenbuffer_vertex_shader.free();
+        screenbuffer_fragment_shader.free();
+
+        // Free the memory as they are no longer needed
+        defer allocator.destroy(screenbuffer_vertex_shader);
+        defer allocator.destroy(screenbuffer_fragment_shader);
+
+
         // Create VAO, VBO, and IB
         self.vertex_array = try buildGlVertexArray(allocator);
         self.vertex_buffer = try buildGlVertexBuffer(allocator);
         self.index_buffer = try buildGlIndexBuffer(allocator);
+        self.screenbuffer_vertex_array = try buildGlVertexArray(allocator);
+        self.screenbuffer_vertex_buffer = try buildGlVertexBuffer(allocator);
 
         // Bind VAO
         // NOTE(devon): Order matters! Bind VAO first, and unbind last!
@@ -189,9 +252,48 @@ pub const OpenGlBackend = struct {
         // bound element buffer object IS stored in the VAO; keep the EBO bound.
         // Unbind the EBO
 
+        // Setup screenbuffer VAO/VBO
+        self.screenbuffer_vertex_array.?.bind();
+        self.screenbuffer_vertex_buffer.?.bind();
+        var screenbuffer_vertices_slice = screenbuffer_vertices[0..];
+        self.screenbuffer_vertex_buffer.?.data(screenbuffer_vertices_slice, GlBufferUsage.StaticDraw);
+
+        const screenbuffer_stride = @intCast(c_longlong, @sizeOf(f32) * 4);
+        const screenbuffer_offset_tex: u32 =  2 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
+
+        c.glEnableVertexAttribArray(index_zero);
+
+        c.glVertexAttribPointer(
+            index_zero, 
+            size_tex_coords,
+            c.GL_FLOAT,
+            c.GL_FALSE,
+            screenbuffer_stride,
+            @intToPtr(?*c_void, offset_position), // Offset
+        );
+
+        c.glEnableVertexAttribArray(index_one);
+
+        c.glVertexAttribPointer(
+            index_one, 
+            size_tex_coords,
+            c.GL_FLOAT,
+            c.GL_FALSE,
+            screenbuffer_stride,
+            @intToPtr(?*c_void, screenbuffer_offset_tex), // Offset
+        );
+
+
+        // Setup framebuffers
+        self.screenbuffer = try framebuffa.buildFramebuffer(allocator);
+        self.screenbuffer.?.bind(framebuffa.FramebufferType.Read);
+        self.screenbuffer.?.addColorAttachment(allocator, framebuffa.FramebufferAttachmentType.Color0, Vector2.new(1280, 720));
+        self.screenbuffer.?.check();
+
+        framebuffa.Framebuffer.resetFramebuffer();
+
         // Unbind the VAO
         c.glBindVertexArray(index_zero);
-
 
         // Set the clear color
         self.clear_color = Color.rgb(0.2, 0.2, 0.2);
@@ -211,18 +313,31 @@ pub const OpenGlBackend = struct {
         self.vertex_buffer.?.free();
         self.index_buffer.?.free();
         self.shader_program.?.free();
+        self.screenbuffer_vertex_array.?.free();
+        self.screenbuffer_vertex_buffer.?.free();
+        self.screenbuffer_program.?.free();
+        self.screenbuffer.?.free(allocator);
 
         // Free memory
         allocator.destroy(self.vertex_array.?);
         allocator.destroy(self.vertex_buffer.?);
         allocator.destroy(self.index_buffer.?);
         allocator.destroy(self.shader_program.?);
+        allocator.destroy(self.screenbuffer_vertex_array.?);
+        allocator.destroy(self.screenbuffer_vertex_buffer.?);
+        allocator.destroy(self.screenbuffer_program.?);
+        allocator.destroy(self.screenbuffer.?);
     }
     
     /// Setups up the OpenGL specific components for rendering
     pub fn beginRender(self: *Self, camera: *Camera.Camera2d) void {
+        // Bind framebuffer
+        self.screenbuffer.?.bind(framebuffa.FramebufferType.Both);
+
         // Clear the background color
-        self.clear();
+        self.clearColorAndDepth();
+
+        c.glEnable(c.GL_DEPTH_TEST);
 
          // Tell OpenGL which shader program's pipeline we want to use
         self.shader_program.?.use();
@@ -283,6 +398,29 @@ pub const OpenGlBackend = struct {
 
         self.shader_program.?.setMatrix4("projection", projection);
         self.shader_program.?.setMatrix4("view", view);
+    }
+
+    /// Handles the framebuffer and clean up for the end of the user-defined render event
+    pub fn endRender(self: *Self) void {
+        // Bind the default frame buffer 
+        framebuffa.Framebuffer.resetFramebuffer();
+
+        // Disable depth testing
+        c.glDisable(c.GL_DEPTH_TEST);
+
+        self.clearColor();
+
+        // Use screenbuffer's shader program
+        self.screenbuffer_program.?.use();
+
+        // Bind screen vao
+        self.screenbuffer_vertex_array.?.bind();
+
+        // Bind screenbuffer's texture
+        self.screenbuffer.?.bindColorAttachment();
+
+        // Draw the quad
+        c.glDrawArrays(c.GL_TRIANGLES, 0, 6);
     }
         
     /// Sets up renderer to be able to draw a untextured quad.
@@ -393,9 +531,15 @@ pub const OpenGlBackend = struct {
     
     
     /// Clears the background with the set clear color
-    pub fn clear(self: *Self) void {
+    pub fn clearColorAndDepth(self: *Self) void {
         c.glClearColor(self.clear_color.r, self.clear_color.g, self.clear_color.b, self.clear_color.a);
         c.glClear(c.GL_COLOR_BUFFER_BIT | c.GL_DEPTH_BUFFER_BIT);
+    }
+
+    /// Clears the background with the set clear color and no DEPTH buffer
+    pub fn clearColor(self: *Self) void {
+        c.glClearColor(self.clear_color.r, self.clear_color.g, self.clear_color.b, self.clear_color.a);
+        c.glClear(c.GL_COLOR_BUFFER_BIT);
     }
 };
 

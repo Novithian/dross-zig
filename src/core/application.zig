@@ -108,7 +108,7 @@ pub const Application = struct {
         _ = c.glfwSetFramebufferSizeCallback(window, gfx.Renderer.resizeInternal);
 
         // Resize the application's viewport to match that of the window
-        self.resize(0, 0, width, height);
+        // self.resize(0, 0, width, height);
 
         // Build the rest of the core components of an application
 

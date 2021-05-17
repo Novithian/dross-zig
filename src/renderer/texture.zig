@@ -32,7 +32,7 @@ pub const Texture = struct {
 
     const Self = @This();
 
-    /// Setups up the Texture and allocates and required memory
+    /// Sets up the Texture and allocates and required memory
     fn build(self: *Self, allocator: *std.mem.Allocator, name: []const u8, path: []const u8) !void {
         switch (selected_api) {
             renderer.BackendApi.OpenGl => {
@@ -50,12 +50,40 @@ pub const Texture = struct {
         }
     }
 
+    /// Sets up a dataless Texture and allocates any required memory
+    fn build_dataless(self: *Self, allocator: *std.mem.Allocator, size: Vector2) !void {
+        switch(selected_api) {
+            renderer.BackendApi.OpenGl => {
+                self.gl_texture = gl.buildDatalessOpenGlTexture(allocator, size) catch | err | {
+                    std.debug.print("[Texture]: {}\n", .{err});
+                    @panic("[Texture]: ERROR occurred when creating a dataless texture!");
+                };
+                self.id = .{
+                    .id_gl = self.gl_texture.?.getId(),
+                };
+            },
+            renderer.BackendApi.Dx12 => {},
+            renderer.BackendApi.Vulkan => {},
+        }
+    }
+
     /// Deallocates any owned memory that was required for operation
     pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
         switch (selected_api) {
             renderer.BackendApi.OpenGl => {
                 self.gl_texture.?.free(allocator);
                 allocator.destroy(self.gl_texture.?);
+            },
+            renderer.BackendApi.Dx12 => {},
+            renderer.BackendApi.Vulkan => {},
+        }
+    }
+
+    /// Binds the texture
+    pub fn bind(self: *Self) void {
+        switch(selected_api) {
+            renderer.BackendApi.OpenGl => {
+                self.gl_texture.?.bind();
             },
             renderer.BackendApi.Dx12 => {},
             renderer.BackendApi.Vulkan => {},
@@ -97,6 +125,17 @@ pub fn buildTexture(allocator: *std.mem.Allocator, name: []const u8, path: []con
     var texture: *Texture = try allocator.create(Texture);
 
     try texture.build(allocator, name, path);
+
+    return texture;
+}
+
+/// Allocates and builds a dataless texture object depending on the target_api
+/// Comments: The caller owns the Texture
+/// INTERNAL USE ONLY.
+pub fn buildDatalessTexture(allocator: *std.mem.Allocator, size: Vector2) anyerror!*Texture {
+    var texture: *Texture = try allocator.create(Texture);
+
+    try texture.build_dataless(allocator, size);
 
     return texture;
 }

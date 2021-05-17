@@ -86,10 +86,8 @@ pub fn main() anyerror!u8 {
     
 
     quad_position = Vector3.zero();
-    // quad_position_two = Vector3.zero();
-    // indicator_position = Vector3.zero();
-    quad_position_two = Vector3.new(2.0, 0.0, 0.0);
-    indicator_position = Vector3.new(-2.0, 0.0, 0.0);
+    quad_position_two = Vector3.new(2.0, 0.0, 1.0);
+    indicator_position = Vector3.new(-2.0, 0.0, -1.0);
 
     // Begin the game loop
     app.*.run();
@@ -99,7 +97,7 @@ pub fn main() anyerror!u8 {
 // Defined what game-level tick/update logic you want to control in the game.
 pub export fn update(delta: f64) void {
     const delta32 = @floatCast(f32, delta);
-    const speed: f32 = 2.0 * delta32;
+    const speed: f32 = 8.0 * delta32;
     const rotational_speed = 100.0 * delta32;
     const movement_smoothing = 0.6;
     var input_horizontal = Input.getKeyPressedValue(DrossKey.KeyD) - Input.getKeyPressedValue(DrossKey.KeyA);

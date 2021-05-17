@@ -104,7 +104,15 @@ pub const Renderer = struct {
 
     /// Handles the clean up for the end of the user-defined render event
     /// Comments: INTERNAL use only.
-    pub fn endRender() void {}
+    pub fn endRender() void {
+        switch (api) {
+            BackendApi.OpenGl => {
+                renderer.gl_backend.?.endRender();
+            },
+            BackendApi.Dx12 => {},
+            BackendApi.Vulkan => {},
+        }
+    }
 
     /// Sets up renderer to be able to draw a untextured quad.
     pub fn drawQuad(position: Vector3) void {

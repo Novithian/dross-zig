@@ -36,6 +36,8 @@ pub fn build(b: *std.build.Builder) void {
     // Copy over the resource code
     b.installBinFile("src/renderer/shaders/default_shader.vs", "assets/shaders/default_shader.vs");
     b.installBinFile("src/renderer/shaders/default_shader.fs", "assets/shaders/default_shader.fs");
+    b.installBinFile("src/renderer/shaders/screenbuffer_shader.vs", "assets/shaders/screenbuffer_shader.vs");
+    b.installBinFile("src/renderer/shaders/screenbuffer_shader.fs", "assets/shaders/screenbuffer_shader.fs");
     b.installBinFile("assets/sprites/s_guy_idle.png", "assets/sprites/s_guy_idle.png");
     b.installBinFile("assets/sprites/s_enemy_01_idle.png", "assets/sprites/s_enemy_01_idle.png");
     b.installBinFile("assets/textures/t_default.png", "assets/textures/t_default.png");
