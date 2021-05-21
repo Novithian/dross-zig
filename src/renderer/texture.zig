@@ -52,9 +52,9 @@ pub const Texture = struct {
 
     /// Sets up a dataless Texture and allocates any required memory
     fn build_dataless(self: *Self, allocator: *std.mem.Allocator, size: Vector2) !void {
-        switch(selected_api) {
+        switch (selected_api) {
             renderer.BackendApi.OpenGl => {
-                self.gl_texture = gl.buildDatalessOpenGlTexture(allocator, size) catch | err | {
+                self.gl_texture = gl.buildDatalessOpenGlTexture(allocator, size) catch |err| {
                     std.debug.print("[Texture]: {}\n", .{err});
                     @panic("[Texture]: ERROR occurred when creating a dataless texture!");
                 };
@@ -81,7 +81,7 @@ pub const Texture = struct {
 
     /// Binds the texture
     pub fn bind(self: *Self) void {
-        switch(selected_api) {
+        switch (selected_api) {
             renderer.BackendApi.OpenGl => {
                 self.gl_texture.?.bind();
             },
@@ -102,7 +102,7 @@ pub const Texture = struct {
 
     /// Returns the size of the Texture
     pub fn getSize(self: *Self) ?Vector2 {
-        switch(selected_api) {
+        switch (selected_api) {
             renderer.BackendApi.OpenGl => {
                 const width: f32 = @intToFloat(f32, self.gl_texture.?.width);
                 const height: f32 = @intToFloat(f32, self.gl_texture.?.height);

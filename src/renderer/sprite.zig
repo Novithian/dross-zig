@@ -17,6 +17,7 @@ pub const Sprite = struct {
     origin: Vector2 = undefined,
     scale: Vector2 = undefined,
     angle: f32 = 0.0,
+    flip_h: bool = false,
 
     const Self = @This();
 
@@ -31,20 +32,21 @@ pub const Sprite = struct {
         self.origin = Vector2.zero();
         self.scale = Vector2.new(1.0, 1.0);
         self.angle = 0.0;
+        self.flip_h = false;
     }
 
     /// Frees the Sprite
     pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
         // Sprite is not the owner of texture, but has a reference to it is all.
         // Resource Handler is what owns all textures and will dispose of it.
-        // It wouldn't make sense to unload a texture just because a single 
+        // It wouldn't make sense to unload a texture just because a single
         // Sprite instance was destroyed, unless that is the only reference of
         // the texture.
     }
 
     /// Returns the TextureId of the stored texture
     pub fn getTextureId(self: *Self) ?tx.TextureId {
-        if(self.texture == undefined) return null;
+        if (self.texture == undefined) return null;
         return self.texture.?.getId();
     }
 
@@ -75,7 +77,7 @@ pub const Sprite = struct {
 
     /// Returns the size of the Sprite's active texture
     pub fn getSize(self: *Self) ?Vector2 {
-        if(self.texture == undefined) return null;
+        if (self.texture == undefined) return null;
         return self.texture.?.getSize();
     }
 
@@ -99,16 +101,25 @@ pub const Sprite = struct {
     pub fn setAngle(self: *Self, new_angle: f32) void {
         self.angle = new_angle;
     }
+
+    /// Flags for the sprite's texture to be flipped horizontally
+    pub fn setFlipH(self: *Self, value: bool) void {
+        self.flip_h = value;
+    }
+
+    /// Returns whether the Sprite's texture has been flagged to be flipped horizontally
+    pub fn getFlipH(self: *Self) bool {
+        return self.flip_h;
+    }
 };
 
 /// Allocates and builds the Sprite
 /// Comments: The allocated Sprite will be owned by the caller, but the 
 /// allocated Texture is owned by the Resource Handler.
-pub fn buildSprite(allocator: *std.mem.Allocator, texture_name: []const u8, texture_path: []const u8) !*Sprite{
+pub fn buildSprite(allocator: *std.mem.Allocator, texture_name: []const u8, texture_path: []const u8) !*Sprite {
     var sprite: *Sprite = try allocator.create(Sprite);
 
     try sprite.build(texture_name, texture_path);
 
     return sprite;
-
 }

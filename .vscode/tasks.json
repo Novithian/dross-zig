@@ -9,7 +9,7 @@
             "command": "zig build",
             "group": {
                 "kind": "build",
-                "isDefault": true
+                "isDefault": true,
             },
             "problemMatcher": [
                 "$gcc"

@@ -39,7 +39,6 @@ var renderer: *Renderer = undefined;
 /// Meant to be MOSTLY backend agnostic.
 pub const Renderer = struct {
     gl_backend: ?*gl.OpenGlBackend = undefined,
-    clear_color: Color,
 
     /// Resizes the viewport to the given size and position 
     /// Comments: INTERNAL use only.
@@ -114,6 +113,17 @@ pub const Renderer = struct {
         }
     }
 
+    /// Change the color the windows clears to.
+    pub fn changeClearColor(color: Color) void {
+        switch (api) {
+            BackendApi.OpenGl => {
+                renderer.gl_backend.?.changeClearColor(color);
+            },
+            BackendApi.Dx12 => {},
+            BackendApi.Vulkan => {},
+        }
+    }
+
     /// Sets up renderer to be able to draw a untextured quad.
     pub fn drawQuad(position: Vector3) void {
         switch (api) {
@@ -125,6 +135,16 @@ pub const Renderer = struct {
         }
     }
 
+    /// Sets up renderer to be able to draw a untextured quad.
+    pub fn drawColoredQuad(position: Vector3, size: Vector3, color: Color) void {
+        switch (api) {
+            BackendApi.OpenGl => {
+                renderer.gl_backend.?.drawColoredQuad(position, size, color);
+            },
+            BackendApi.Dx12 => {},
+            BackendApi.Vulkan => {},
+        }
+    }
     /// Sets up renderer to be able to draw a textured quad.
     pub fn drawTexturedQuad(id: TextureId, position: Vector3) void {
         switch (api) {
@@ -135,7 +155,7 @@ pub const Renderer = struct {
             BackendApi.Vulkan => {},
         }
     }
-    
+
     /// Sets up renderer to be able to draw a Sprite.
     pub fn drawSprite(sprite: *Sprite, position: Vector3) void {
         switch (api) {

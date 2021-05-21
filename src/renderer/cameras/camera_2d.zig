@@ -54,18 +54,20 @@ pub const Camera2d = struct {
     pub fn build(self: *Self) void {
         self.target_position = Vector3.new(0.0, 0.0, 0.0);
         // self.zoom = 0.15;
-        self.zoom = 0.12;
+        // self.zoom = 0.12;
+        // self.zoom = 4.1;
+        self.zoom = 4.0;
         // self.zoom = 61.0;
         // self.zoom = 1.0;
         self.near = 0.01;
         self.far = 100.0;
         self.speed = 20.0;
         const window_size = Application.getWindowSize();
-        self.position = Vector3.new(
-            0.5 * self.zoom, 
-            0.5 * self.zoom, 
-            0.0,
-        );
+        //self.position = Vector3.new(
+        //    0.5 * self.zoom,
+        //    0.5 * self.zoom,
+        //    0.0,
+        //);
         // self.position = Vector3.zero();
     }
 

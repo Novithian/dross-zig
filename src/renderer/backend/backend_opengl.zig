@@ -32,6 +32,7 @@ const square_vertices: [20]f32 = [20]f32{
     1.0, 1.0, 0.0,  1.0, 1.0,// Top Right
     0.0, 1.0, 0.0,  0.0, 1.0,// Top Left
 };
+
 //[0  3]
 //[2  1]
 const square_indices: [6]c_uint = [6]c_uint{
@@ -285,9 +286,15 @@ pub const OpenGlBackend = struct {
 
 
         // Setup framebuffers
+        // const screen_buffer_size = Vector2.new(1280, 720);
+        const screen_buffer_size = Application.getViewportSize();
         self.screenbuffer = try framebuffa.buildFramebuffer(allocator);
         self.screenbuffer.?.bind(framebuffa.FramebufferType.Read);
-        self.screenbuffer.?.addColorAttachment(allocator, framebuffa.FramebufferAttachmentType.Color0, Vector2.new(1280, 720));
+        self.screenbuffer.?.addColorAttachment(
+            allocator, 
+            framebuffa.FramebufferAttachmentType.Color0, 
+            screen_buffer_size,
+        );
         self.screenbuffer.?.check();
 
         framebuffa.Framebuffer.resetFramebuffer();
@@ -351,46 +358,29 @@ pub const OpenGlBackend = struct {
 
         // Set up projection matrix
         // const projection = Matrix4.identity().scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
-        const window_size = Application.getWindowSize();
-        const aspect_ratio_w = window_size.getX() / window_size.getY();
-        const aspect_ratio_h = window_size.getY() / window_size.getX();
+        // const window_size = Application.getWindowSize();
+        const viewport_size = Application.getViewportSize();
+        // const aspect_ratio_w = window_size.getX() / window_size.getY();
+        // const aspect_ratio_h = window_size.getY() / window_size.getX();
 
         // Works well enough
+        // const projection = Matrix4.orthographic(
+        //     -aspect_ratio_w, // Left
+        //     aspect_ratio_w, // Right
+        //     -aspect_ratio_h, // bottom
+        //     aspect_ratio_h, // top
+        //     -1.0, //Near
+        //     1.0, // Far
+        // ); 
+
         const projection = Matrix4.orthographic(
-            -aspect_ratio_w, // Left
-            aspect_ratio_w, // Right
-            -aspect_ratio_h, // bottom
-            aspect_ratio_h, // top
+            0, // Left
+            viewport_size.getX(), // Right
+            0, // top
+            viewport_size.getY(), // bottom
             -1.0, //Near
             1.0, // Far
         ); 
-
-        // const projection = Matrix4.orthographic(
-        //     0, // Left
-        //     window_size.getX(), // Right
-        //     window_size.getY(), // bottom
-        //     0, // top
-        //     -1.0, //Near
-        //     1.0, // Far
-        // ); 
-
-        // const projection = Matrix4.orthographic(
-        //     0.0, // Left
-        //     window_size.getX(), // Right
-        //     0.0, // bottom
-        //     window_size.getY(), // top
-        //     -1.0, //Near
-        //     1.0, // Far
-        // ); 
-
-        // const projection = Matrix4.orthographic(
-        //     0.0, // Left
-        //     window_size.getX() * camera_zoom, // Right
-        //     0.0, // bottom
-        //     window_size.getY() * camera_zoom, // top
-        //     -1.0, //Near
-        //     1.0, // Far
-        // ); 
      
         // Set up the view matrix
         // const view = Matrix4.fromTranslate(camera_pos).scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
@@ -440,6 +430,24 @@ pub const OpenGlBackend = struct {
         self.drawIndexed(self.vertex_array.?);
     }
     
+    /// Sets up renderer to be able to draw a untextured quad.
+    pub fn drawColoredQuad(self: *Self, position: Vector3, size: Vector3, color: Color) void {
+         // Bind Texture
+        c.glBindTexture(c.GL_TEXTURE_2D, self.debug_texture.?.getGlId());
+
+        // Translation * Rotation * Scale
+        var transform = Matrix4.fromTranslate(position);
+        transform = transform.scale(size);
+
+        self.shader_program.?.setMatrix4("model", transform);
+        self.shader_program.?.setFloat3("sprite_color", color.r, color.g, color.b);
+
+        // Bind the VAO
+        self.vertex_array.?.bind();
+        
+        self.drawIndexed(self.vertex_array.?);
+    }
+    
     /// Sets up renderer to be able to draw a textured quad.
     pub fn drawTexturedQuad(self: *Self, id: TextureId, position: Vector3) void {
          // Bind Texture
@@ -465,6 +473,7 @@ pub const OpenGlBackend = struct {
             return;
         };
         const sprite_color = sprite.getColor();
+        const sprite_flip = sprite.getFlipH();
         const sprite_scale = Vector3.fromVector2(sprite.getScale(), 1.0);
         const sprite_size_op = sprite.getSize();
         const sprite_size = sprite_size_op orelse return;
@@ -509,6 +518,7 @@ pub const OpenGlBackend = struct {
 
         self.shader_program.?.setMatrix4("model", model);
         self.shader_program.?.setVector3("sprite_color", sprite_color.toVector3());
+        self.shader_program.?.setBool("flip_h", sprite_flip);
 
         // Bind the VAO
         self.vertex_array.?.bind();
@@ -528,7 +538,11 @@ pub const OpenGlBackend = struct {
             offset, // Offset in a buffer or a pointer to the location where the indices are stored
         );
     }
-    
+
+    /// Changes to clear color
+    pub fn changeClearColor(self: *Self, color: Color) void {
+        self.clear_color = color;
+    }
     
     /// Clears the background with the set clear color
     pub fn clearColorAndDepth(self: *Self) void {
@@ -819,22 +833,22 @@ const GlShaderProgram = struct {
     }
 
     /// Sets a uniform boolean of `name` to the requested `value`
-    pub fn setBool(self: *Self, name: [:0]const u8, value: bool) void {
-        const uniform_location = c.glGetUniformLocation(self.handle, &name.ptr);
-        const int_value: c_int = @as(c_int, value);
+    pub fn setBool(self: *Self, name: [*c]const u8, value: bool) void {
+        const uniform_location = c.glGetUniformLocation(self.handle, name);
+        const int_value: c_int = @intCast(c_int, @boolToInt(value));
         c.glUniform1i(uniform_location, int_value);
     }
 
     /// Sets a uniform integer of `name` to the requested `value`
-    pub fn setInt(self: *Self, name: [:0]const u8, value: i32) void {
-        const uniform_location = c.glGetUniformLocation(self.handle, &name.ptr);
-        const int_value: c_int = @as(c_int, value);
+    pub fn setInt(self: *Self, name: [*c]const u8, value: i32) void {
+        const uniform_location = c.glGetUniformLocation(self.handle, name);
+        const int_value: c_int = @intCast(c_int, value);
         c.glUniform1i(uniform_location, int_value);
     }
 
     /// Sets a uniform float of `name` to the requested `value`
-    pub fn setFloat(self: *Self, name: [:0]const u8, value: f32) void {
-        const uniform_location = c.glGetUniformLocation(self.handle, &name.ptr);
+    pub fn setFloat(self: *Self, name: [*c]const u8, value: f32) void {
+        const uniform_location = c.glGetUniformLocation(self.handle, name);
         c.glUniform1f(uniform_location, value);
     }
 

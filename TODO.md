@@ -4,15 +4,16 @@
 
 ## **TODO** ##
 
+
 ### General ###
 - Wrapper for zalgebra vec4
 - Pixel snap
 - Basic Profiler 
 
 ### Renderer ###
-- Framebuffer
 
 ### Texture ###
+- Texture Atlas
 
 ### Sprite ###
 - Sprite origin ( Not really working yet )
@@ -34,6 +35,10 @@
 - Wrapper for window
 
 ## **LOG** ##
+- **[05-19-2021]**
+	- Sprite flip
+	- Moved sandbox related files to the /sandbox folder.
+	- Made a Player struct to contain the test data.
 - **[05-17-2021]**
     - Framebuffer
 - **[05-12-2021]**

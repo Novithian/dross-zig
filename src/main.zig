@@ -1,41 +1,50 @@
 const std = @import("std");
+// Dross-zig
 const Dross = @import("dross_zig.zig");
 usingnamespace Dross;
-// List of things the user will have to define:
-//  - Create a allocator
-//      var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-//  - Defer the deinit if gpa
-//      defer {
-//          const leader = gpa.deinit();
-//           if(leaked) @panic("mem leak");
-//      }
-//  - Create application
-//      var app: *dross_app.Application = try dross_app.buildApplication(&gpa.allocator, "title", width, height);
-//  - defer the allocator's free of the app
-//      defer gpa.allocator.destroy(app)
-//  - defer the app's free
-//      defer app.*.free();
-//  - Run the app loop
-//      app.*.run();
-//  - Define an update function
-//      pub export fn update(delta: f64) void;
+const Player = @import("sandbox/player.zig").Player;
+// -------------------------------------------
 
 // Application Infomation
 const APP_TITLE = "Dross-Zig Application";
-const APP_WIDTH = 1280 ;
-const APP_HEIGHT = 720;
+const APP_WINDOW_WIDTH = 1280;
+const APP_WINDOW_HEIGHT = 720;
+const APP_VIEWPORT_WIDTH = 320;
+const APP_VIEWPORT_HEIGHT = 180;
 
 //
 var app: *Application = undefined;
 var camera: *Camera2d = undefined;
 
-var quad_position: Vector3 = undefined;
+var player: *Player = undefined;
+
 var quad_position_two: Vector3 = undefined;
 var indicator_position: Vector3 = undefined;
 
-var quad_sprite: *Sprite = undefined;
 var quad_sprite_two: *Sprite = undefined;
 var indicator_sprite: *Sprite = undefined;
+
+// Colors
+const background_color: Color = .{
+    .r = 0.27843,
+    .g = 0.27843,
+    .b = 0.27843,
+};
+
+const ground_color: Color = .{
+    .r = 0.08235,
+    .g = 0.12157,
+    .b = 0.14510,
+};
+
+//const ground_color: Color = .{
+//    .r = 0.58431,
+//    .g = 0.47834,
+//    .b = 0.36471,
+//};
+
+const ground_position: Vector3 = Vector3.new(0.0, 0.0, 0.0);
+const ground_scale: Vector3 = Vector3.new(20.0, 1.0, 0.0);
 
 pub fn main() anyerror!u8 {
 
@@ -51,8 +60,10 @@ pub fn main() anyerror!u8 {
     app = try buildApplication(
         &gpa.allocator,
         APP_TITLE,
-        APP_WIDTH,
-        APP_HEIGHT,
+        APP_WINDOW_WIDTH,
+        APP_WINDOW_HEIGHT,
+        APP_VIEWPORT_WIDTH,
+        APP_VIEWPORT_HEIGHT,
     );
 
     // Clean up the allocated application before exiting
@@ -68,72 +79,67 @@ pub fn main() anyerror!u8 {
     const camera_op = getCurrentCamera();
     camera = camera_op orelse return CameraError.CameraNotFound;
 
-    quad_sprite = try buildSprite(&gpa.allocator, "guy_idle", "assets/sprites/s_guy_idle.png");
+    player = try Player.build(&gpa.allocator);
+
     quad_sprite_two = try buildSprite(&gpa.allocator, "enemy_01_idle", "assets/sprites/s_enemy_01_idle.png");
     indicator_sprite = try buildSprite(&gpa.allocator, "indicator", "assets/sprites/s_ui_indicator.png");
 
-    // quad_sprite_two.*.setOrigin(Vector2.new(7.0, 14.0));
-    indicator_sprite.*.setOrigin(Vector2.new(8.0, 11.0));
-    // indicator_sprite.*.setAngle(30.0);
+    //quad_sprite_two.*.setOrigin(Vector2.new(7.0, 14.0));
+    //indicator_sprite.*.setOrigin(Vector2.new(8.0, 11.0));
+    //indicator_sprite.*.setAngle(30.0);
 
-    defer gpa.allocator.destroy(quad_sprite);
+    defer gpa.allocator.destroy(player);
     defer gpa.allocator.destroy(quad_sprite_two);
     defer gpa.allocator.destroy(indicator_sprite);
 
-    defer quad_sprite.*.free(&gpa.allocator);
+    defer player.free(&gpa.allocator);
     defer quad_sprite_two.*.free(&gpa.allocator);
     defer indicator_sprite.*.free(&gpa.allocator);
-    
 
-    quad_position = Vector3.zero();
-    quad_position_two = Vector3.new(2.0, 0.0, 1.0);
-    indicator_position = Vector3.new(-2.0, 0.0, -1.0);
+    quad_position_two = Vector3.new(2.0, 1.0, 1.0);
+    indicator_position = Vector3.new(5.0, 5.0, -1.0);
+
+    Renderer.changeClearColor(background_color);
 
     // Begin the game loop
     app.*.run();
 
     return 0;
 }
-// Defined what game-level tick/update logic you want to control in the game.
+
+/// Defines what game-level tick/update logic you want to control in the game.
 pub export fn update(delta: f64) void {
     const delta32 = @floatCast(f32, delta);
     const speed: f32 = 8.0 * delta32;
     const rotational_speed = 100.0 * delta32;
+    const scale_speed = 10.0 * delta32;
+    const max_scale = 5.0;
     const movement_smoothing = 0.6;
-    var input_horizontal = Input.getKeyPressedValue(DrossKey.KeyD) - Input.getKeyPressedValue(DrossKey.KeyA);
-    var input_vertical = Input.getKeyPressedValue(DrossKey.KeyW) - Input.getKeyPressedValue(DrossKey.KeyS);
 
-    const target_position =quad_position.add( //
-        Vector3.new( //
-        input_horizontal * speed, //
-        input_vertical * speed, //
-        0.0, //
-    ));
+    player.update(delta32);
 
-    quad_position = quad_position.lerp(target_position, movement_smoothing);
-    
+    const quad_old_scale = quad_sprite_two.*.getScale();
+    const indicator_old_angle = indicator_sprite.*.getAngle();
 
-    // const quad_old_angle = quad_sprite_two.*.getAngle();
-    // const indicator_old_angle = indicator_sprite.*.getAngle();
-
-    // // quad_sprite_two.setAngle(quad_old_angle + rotational_speed);
-    // // indicator_sprite.setAngle(indicator_old_angle + rotational_speed);
+    indicator_sprite.setAngle(indicator_old_angle + rotational_speed);
 
     // const window_size = Application.getWindowSize();
     // const zoom = camera.*.getZoom();
     // const old_camera_position = camera.*.getPosition();
     // const camera_smoothing = 0.075;
 
-    // const new_camera_position = Vector3.new(    
-    //     lerp(old_camera_position.getX(), -quad_position.getX(), camera_smoothing), 
-    //     lerp(old_camera_position.getY(), -quad_position.getY(), camera_smoothing), 
+    // const new_camera_position = Vector3.new(
+    //     lerp(old_camera_position.getX(), -quad_position.getX(), camera_smoothing),
+    //     lerp(old_camera_position.getY(), -quad_position.getY(), camera_smoothing),
     //     0.0,
     // );
     // camera.*.setPosition(new_camera_position);
 }
 
+/// Defines the game-level rendering
 pub export fn render() void {
-    Renderer.drawSprite(quad_sprite, quad_position);
+    player.render();
     Renderer.drawSprite(quad_sprite_two, quad_position_two);
     Renderer.drawSprite(indicator_sprite, indicator_position);
+    Renderer.drawColoredQuad(ground_position, ground_scale, ground_color);
 }

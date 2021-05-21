@@ -34,6 +34,9 @@ var window_size: Vector2 = undefined;
 /// Application instance.
 var window: *c.GLFWwindow = undefined;
 
+/// Stores the application's viewport size
+var viewport_size: Vector2 = undefined;
+
 // -----------------------------------------
 //      - Application -
 // -----------------------------------------
@@ -74,7 +77,7 @@ pub const Application = struct {
 
     /// Allocates the necessary components to run the application
     /// Comments: The application will own any memory allocated.
-    pub fn build(self: *Application, allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, height: c_int) anyerror!void {
+    pub fn build(self: *Application, allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, height: c_int, vp_width: f32, vp_height: f32) anyerror!void {
         // Initialze GLFW, returns GL_FALSE if an error occured.
         if (c.glfwInit() == c.GL_FALSE) return ApplicationError.WindowInit;
 
@@ -92,6 +95,9 @@ pub const Application = struct {
             @intToFloat(f32, width),
             @intToFloat(f32, height),
         );
+
+        // Set the viewport size
+        viewport_size = Vector2.new(vp_width, vp_height);
 
         // Make our window the current context
         c.glfwMakeContextCurrent(window);
@@ -231,18 +237,28 @@ pub const Application = struct {
         return window_size;
     }
 
+    /// Sets the window size property
     pub fn setWindowSize(width: f32, height: f32) void {
         window_size = Vector2.new(width, height);
     }
 
+    /// Sets the viewport size
+    pub fn setViewport(width: f32, height: f32) void {
+        viewport_size = Vector2.new(width, height);
+    }
+
+    /// Returns the viewport size
+    pub fn getViewportSize() Vector2 {
+        return viewport_size;
+    }
 };
 
 /// Allocated and builds the constituent components of an Application.
 /// Comments: The caller will be the owner of the returned pointer.
-pub fn buildApplication(allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, height: c_int) anyerror!*Application {
+pub fn buildApplication(allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, height: c_int, vp_width: f32, vp_height: f32) anyerror!*Application {
     var app: *Application = try allocator.create(Application);
 
-    try app.build(allocator, title, width, height);
+    try app.build(allocator, title, width, height, vp_width, vp_height);
 
     return app;
 }

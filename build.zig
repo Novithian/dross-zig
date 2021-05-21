@@ -11,6 +11,31 @@ pub fn build(b: *std.build.Builder) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const mode = b.standardReleaseOptions();
 
+    // For library
+    // const lib = b.addSharedLibrary("dross-zig", "src/dross_zig.zig", .unversioned);
+    // lib.setBuildMode(mode);
+    // lib.addIncludeDir("libs/glfw/include");
+    // lib.addLibPath("libs/glfw/x64");
+    // b.installBinFile("libs/glfw/x64/glfw3.dll", "glfw3.dll");
+
+    // lib.addIncludeDir("libs/glad");
+    // lib.addCSourceFile("libs/glad/src/glad.c", &[_][]const u8{"--std=c99"});
+
+    // lib.addIncludeDir("libs/stb_image");
+    // lib.addCSourceFile("libs/stb_image/stb_image_impl.c", &[_][]const u8{"--std=c17"});
+
+    // lib.linkSystemLibrary("glfw3");
+    // lib.linkSystemLibrary("opengl32");
+
+    // lib.addPackage(.{
+    //     .name = "zalgebra",
+    //     .path = "libs/zalgebra/src/main.zig",
+    // });
+
+    // lib.linkLibC();
+    // lib.install();
+
+    // For executable
     const exe = b.addExecutable("dross-zig", "src/main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);
@@ -39,12 +64,11 @@ pub fn build(b: *std.build.Builder) void {
     b.installBinFile("src/renderer/shaders/screenbuffer_shader.vs", "assets/shaders/screenbuffer_shader.vs");
     b.installBinFile("src/renderer/shaders/screenbuffer_shader.fs", "assets/shaders/screenbuffer_shader.fs");
     b.installBinFile("assets/sprites/s_guy_idle.png", "assets/sprites/s_guy_idle.png");
+    b.installBinFile("assets/sprites/s_player.png", "assets/sprites/s_player.png");
     b.installBinFile("assets/sprites/s_enemy_01_idle.png", "assets/sprites/s_enemy_01_idle.png");
     b.installBinFile("assets/textures/t_default.png", "assets/textures/t_default.png");
 
     exe.linkLibC();
-
-    // exe.subsystem = std.Target.SubSystem.Windows;
 
     exe.install();
 

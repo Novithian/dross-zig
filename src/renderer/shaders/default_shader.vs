@@ -9,6 +9,7 @@ uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
 uniform vec3 sprite_color;
+uniform bool flip_h;
 
 
 void main(){
@@ -16,5 +17,10 @@ void main(){
     // Vec4 = M4 * M4 * M4 * Vec4
     //gl_Position = projection_view * model * vec4(in_pos.xy, 0.0, 1.0);
     gl_Position = projection * view * model * vec4(in_pos.xyz, 1.0);
-    out_tex = in_tex;
+	if(flip_h){
+		out_tex = in_tex;
+		out_tex.x = 1 - out_tex.x;
+	}else{
+		out_tex = in_tex;
+	}
 }

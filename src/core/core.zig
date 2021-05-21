@@ -1,7 +1,5 @@
-
 // dross-zig
 const Vector3 = @import("vector3.zig").Vector3;
-
 
 // -----------------------------------------
 //      - Color -
@@ -45,5 +43,4 @@ pub const Color = struct {
     pub fn toVector3(self: Self) Vector3 {
         return Vector3.new(self.r, self.g, self.b);
     }
-
 };
