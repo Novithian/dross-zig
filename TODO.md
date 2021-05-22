@@ -35,6 +35,9 @@
 - Wrapper for window
 
 ## **LOG** ##
+- **[05-21-2021]**
+	- Required the passing of the user-defined update event and render event to the run function now rather than exporting the function as it uses the .C calling convension, which does not allow for error return types.
+	- Basic scope timer
 - **[05-19-2021]**
 	- Sprite flip
 	- Moved sandbox related files to the /sandbox folder.

@@ -40,23 +40,27 @@ pub fn build(b: *std.build.Builder) void {
     exe.setTarget(target);
     exe.setBuildMode(mode);
 
+    // GLFW
     exe.addIncludeDir("libs/glfw/include");
     exe.addLibPath("libs/glfw/x64");
+    exe.linkSystemLibrary("glfw3");
     b.installBinFile("libs/glfw/x64/glfw3.dll", "glfw3.dll");
 
+    // GLAD
     exe.addIncludeDir("libs/glad");
     exe.addCSourceFile("libs/glad/src/glad.c", &[_][]const u8{"--std=c99"});
 
+    // STB_IMAGE
     exe.addIncludeDir("libs/stb_image");
     exe.addCSourceFile("libs/stb_image/stb_image_impl.c", &[_][]const u8{"--std=c17"});
 
-    exe.linkSystemLibrary("glfw3");
-    exe.linkSystemLibrary("opengl32");
-
+    // ZALGEBRA
     exe.addPackage(.{
         .name = "zalgebra",
         .path = "libs/zalgebra/src/main.zig",
     });
+
+    exe.linkSystemLibrary("opengl32");
 
     // Copy over the resource code
     b.installBinFile("src/renderer/shaders/default_shader.vs", "assets/shaders/default_shader.vs");

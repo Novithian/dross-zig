@@ -10,7 +10,6 @@ const TextureId = @import("texture.zig").TextureId;
 const Sprite = @import("sprite.zig").Sprite;
 const Color = @import("../core/core.zig").Color;
 const Camera = @import("../renderer/cameras/camera_2d.zig");
-const EventLoop = @import("../core/event_loop.zig");
 const Matrix4 = @import("../core/matrix4.zig").Matrix4;
 const Vector3 = @import("../core/vector3.zig").Vector3;
 // -----------------------------------------------------------------------------
@@ -40,30 +39,6 @@ var renderer: *Renderer = undefined;
 pub const Renderer = struct {
     gl_backend: ?*gl.OpenGlBackend = undefined,
 
-    /// Resizes the viewport to the given size and position 
-    /// Comments: INTERNAL use only.
-    pub fn resizeViewport(x: c_int, y: c_int, width: c_int, height: c_int) void {
-        switch (api) {
-            BackendApi.OpenGl => {
-                gl.resizeViewport(x, y, width, height);
-            },
-            BackendApi.Dx12 => {},
-            BackendApi.Vulkan => {},
-        }
-    }
-
-    /// Handles the rendering process
-    /// Comments: INTERNAL use only.
-    pub fn render() void {
-        var camera = Camera.getCurrentCamera();
-        // Prepare for the user defined render
-        Renderer.beginRender(camera.?);
-        // Call user-defined render
-        EventLoop.renderInternal();
-        // Clean up
-        Renderer.endRender();
-    }
-
     /// Builds the graphics API
     /// Comments: INTERNAL use only. The Renderer will be the owner of the allocated memory.
     pub fn build(self: *Renderer, allocator: *std.mem.Allocator) anyerror!void {
@@ -87,6 +62,21 @@ pub const Renderer = struct {
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},
         }
+    }
+
+    /// Handles the rendering process
+    /// Comments: INTERNAL use only.
+    pub fn render(render_loop: fn () anyerror!void) void {
+        var camera = Camera.getCurrentCamera();
+        // Prepare for the user defined render
+        Renderer.beginRender(camera.?);
+        // Call user-defined render
+        _ = render_loop() catch |err| {
+            std.debug.print("[Renderer]: Render event encountered an error! {s}\n", .{err});
+            @panic("[Renderer]: Error occurred during the user-defined render event!\n");
+        };
+        // Clean up
+        Renderer.endRender();
     }
 
     /// Flags and sets up for the start of the user-defined render event
@@ -161,6 +151,18 @@ pub const Renderer = struct {
         switch (api) {
             BackendApi.OpenGl => {
                 renderer.gl_backend.?.drawSprite(sprite, position);
+            },
+            BackendApi.Dx12 => {},
+            BackendApi.Vulkan => {},
+        }
+    }
+
+    /// Resizes the viewport to the given size and position 
+    /// Comments: INTERNAL use only.
+    pub fn resizeViewport(x: c_int, y: c_int, width: c_int, height: c_int) void {
+        switch (api) {
+            BackendApi.OpenGl => {
+                gl.resizeViewport(x, y, width, height);
             },
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},

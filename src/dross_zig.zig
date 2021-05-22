@@ -1,5 +1,4 @@
 pub usingnamespace @import("core/application.zig");
-pub usingnamespace @import("core/event_loop.zig");
 pub usingnamespace @import("core/input.zig");
 pub usingnamespace @import("core/matrix4.zig");
 pub usingnamespace @import("core/vector2.zig");
@@ -12,3 +11,4 @@ pub usingnamespace @import("renderer/renderer.zig");
 pub usingnamespace @import("renderer/cameras/camera_2d.zig");
 pub usingnamespace @import("utils/file_loader.zig");
 pub usingnamespace @import("utils/math_helpers.zig");
+pub usingnamespace @import("utils/timer.zig");

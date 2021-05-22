@@ -5,6 +5,9 @@ usingnamespace Dross;
 const Player = @import("sandbox/player.zig").Player;
 // -------------------------------------------
 
+// Allocator
+var allocator: *std.mem.Allocator = undefined;
+
 // Application Infomation
 const APP_TITLE = "Dross-Zig Application";
 const APP_WINDOW_WIDTH = 1280;
@@ -50,6 +53,7 @@ pub fn main() anyerror!u8 {
 
     // create a general purpose allocator
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    allocator = &gpa.allocator;
 
     defer {
         const leaked = gpa.deinit();
@@ -58,7 +62,7 @@ pub fn main() anyerror!u8 {
 
     // Create the application
     app = try buildApplication(
-        &gpa.allocator,
+        allocator,
         APP_TITLE,
         APP_WINDOW_WIDTH,
         APP_WINDOW_HEIGHT,
@@ -67,7 +71,7 @@ pub fn main() anyerror!u8 {
     );
 
     // Clean up the allocated application before exiting
-    defer gpa.allocator.destroy(app);
+    defer allocator.destroy(app);
 
     // NOTE(devon): Defer executes in the opposite order of the
     // calls, so app.free will be executed before allocator.destroy
@@ -79,22 +83,22 @@ pub fn main() anyerror!u8 {
     const camera_op = getCurrentCamera();
     camera = camera_op orelse return CameraError.CameraNotFound;
 
-    player = try Player.build(&gpa.allocator);
+    player = try Player.build(allocator);
 
-    quad_sprite_two = try buildSprite(&gpa.allocator, "enemy_01_idle", "assets/sprites/s_enemy_01_idle.png");
-    indicator_sprite = try buildSprite(&gpa.allocator, "indicator", "assets/sprites/s_ui_indicator.png");
+    quad_sprite_two = try buildSprite(allocator, "enemy_01_idle", "assets/sprites/s_enemy_01_idle.png");
+    indicator_sprite = try buildSprite(allocator, "indicator", "assets/sprites/s_ui_indicator.png");
 
     //quad_sprite_two.*.setOrigin(Vector2.new(7.0, 14.0));
     //indicator_sprite.*.setOrigin(Vector2.new(8.0, 11.0));
     //indicator_sprite.*.setAngle(30.0);
 
-    defer gpa.allocator.destroy(player);
-    defer gpa.allocator.destroy(quad_sprite_two);
-    defer gpa.allocator.destroy(indicator_sprite);
+    defer allocator.destroy(player);
+    defer allocator.destroy(quad_sprite_two);
+    defer allocator.destroy(indicator_sprite);
 
-    defer player.free(&gpa.allocator);
-    defer quad_sprite_two.*.free(&gpa.allocator);
-    defer indicator_sprite.*.free(&gpa.allocator);
+    defer player.free(allocator);
+    defer quad_sprite_two.*.free(allocator);
+    defer indicator_sprite.*.free(allocator);
 
     quad_position_two = Vector3.new(2.0, 1.0, 1.0);
     indicator_position = Vector3.new(5.0, 5.0, -1.0);
@@ -102,13 +106,13 @@ pub fn main() anyerror!u8 {
     Renderer.changeClearColor(background_color);
 
     // Begin the game loop
-    app.*.run();
+    app.*.run(update, render);
 
     return 0;
 }
 
 /// Defines what game-level tick/update logic you want to control in the game.
-pub export fn update(delta: f64) void {
+pub fn update(delta: f64) anyerror!void {
     const delta32 = @floatCast(f32, delta);
     const speed: f32 = 8.0 * delta32;
     const rotational_speed = 100.0 * delta32;
@@ -134,10 +138,11 @@ pub export fn update(delta: f64) void {
     //     0.0,
     // );
     // camera.*.setPosition(new_camera_position);
+
 }
 
 /// Defines the game-level rendering
-pub export fn render() void {
+pub fn render() anyerror!void {
     player.render();
     Renderer.drawSprite(quad_sprite_two, quad_position_two);
     Renderer.drawSprite(indicator_sprite, indicator_position);

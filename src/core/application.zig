@@ -2,9 +2,9 @@
 const c = @import("../c_global.zig").c_imp;
 const std = @import("std");
 // dross-rs
+//const Timer = @import("../utils/timer.zig").Timer;
 const gfx = @import("../renderer/renderer.zig");
 const cam = @import("../renderer/cameras/camera_2d.zig");
-const EventLoop = @import("event_loop.zig");
 const res = @import("resource_handler.zig");
 const Vector2 = @import("../core/vector2.zig").Vector2;
 const Vector3 = @import("../core/vector3.zig").Vector3;
@@ -49,8 +49,14 @@ pub const Application = struct {
     previous_frame_time: f64 = 0,
 
     /// Runs the applications main event loop. 
-    pub fn run(self: *Application) void {
+    pub fn run(self: *Application, update_loop: fn (f64) anyerror!void, render_loop: fn () anyerror!void) void {
         while (c.glfwWindowShouldClose(window) == 0) {
+            // Profiling
+            var timer = std.time.Timer.start() catch |err| {
+                std.debug.print("[Application]: Error occurred when creating a timer! {s}\n", .{err});
+                @panic("[Application]: Error occurred creating a timer!\n");
+            };
+
             // Calculate timestep
             const current_time = c.glfwGetTime();
             var delta = current_time - self.previous_frame_time;
@@ -62,16 +68,22 @@ pub const Application = struct {
             // Process input
             self.processInput(delta);
 
-            // Update
-            EventLoop.updateInternal(delta);
+            _ = update_loop(delta) catch |err| {
+                std.debug.print("[Application]: Update loop encountered an error! {s}\n", .{err});
+                @panic("[Application]: Error occurred during the update loop!\n");
+            };
 
             // Render
-            gfx.Renderer.render();
+            gfx.Renderer.render(render_loop);
 
             // Submit
             c.glfwSwapBuffers(window);
             Input.updateInput();
             c.glfwPollEvents();
+
+            const end_time = timer.read();
+            const duration = end_time / std.time.ns_per_ms;
+            std.debug.print("[Timer][Update]: Duration {} ms\n", .{duration});
         }
     }
 
