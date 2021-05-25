@@ -8,6 +8,8 @@ const Color = @import("../../core/core.zig").Color;
 const texture = @import("../texture.zig");
 const TextureId = texture.TextureId;
 const Sprite = @import("../sprite.zig").Sprite;
+const PackingMode = @import("../renderer.zig").PackingMode;
+const ByteAlignment = @import("../renderer.zig").ByteAlignment;
 const Camera = @import("../cameras/camera_2d.zig");
 const Matrix4 = @import("../../core/matrix4.zig").Matrix4;
 const Vector3 = @import("../../core/vector3.zig").Vector3;
@@ -118,7 +120,8 @@ pub const OpenGlBackend = struct {
 
         // Sets the pixel storage mode that affefcts the operation
         // of subsequent glReadPixel as well as unpacking texture patterns.
-        c.glPixelStorei(c.GL_UNPACK_ALIGNMENT, 1);
+        //c.glPixelStorei(c.GL_UNPACK_ALIGNMENT, 1);
+        self.setByteAlignment(PackingMode.Unpack, ByteAlignment.One);
 
         // Enable depth testing
         c.glEnable(c.GL_DEPTH_TEST);
@@ -555,6 +558,27 @@ pub const OpenGlBackend = struct {
         c.glClearColor(self.clear_color.r, self.clear_color.g, self.clear_color.b, self.clear_color.a);
         c.glClear(c.GL_COLOR_BUFFER_BIT);
     }
+    
+    /// Request to disable byte_alignment restriction
+    pub fn setByteAlignment(self: *Self, packing_mode: PackingMode, byte_alignment: ByteAlignment) void {
+        const pack_type = switch(packing_mode) {
+            PackingMode.Pack => @enumToInt(GlPackingMode.Pack),
+            PackingMode.Unpack => @enumToInt(GlPackingMode.Unpack),
+        };
+        const alignment: c_int = switch(byte_alignment) {
+            ByteAlignment.One => 1,
+            ByteAlignment.Two => 2,
+            ByteAlignment.Four => 4,
+            ByteAlignment.Eight => 8,
+        };
+
+        c.glPixelStorei(pack_type, alignment);
+    }
+
+    /// Clears the out the currently bound texture
+    pub fn clearBoundTexture() void {
+        c.glBindTexture(c.GL_TEXTURE_2D, 0);
+    }
 };
 
 /// Resizes the viewport to the given size and position 
@@ -887,6 +911,17 @@ const GlShaderProgram = struct {
     }
  
 };
+
+// -----------------------------------------
+//      - GlPackingMode -
+// -----------------------------------------
+
+/// Describes what type of shader 
+pub const GlPackingMode = enum(c_uint) {
+    Pack = c.GL_PACK_ALIGNMENT,
+    Unpack = c.GL_UNPACK_ALIGNMENT,
+};
+
 
 /// Allocates an GlShaderProgram and sets it up
 /// Comments: The caller will own the returned pointer.

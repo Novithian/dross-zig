@@ -104,8 +104,8 @@ pub const OpenGlTexture = struct {
         c.stbi_image_free(self.data.ptr);
     }
 
-    pub fn build_dataless(self: *Self, size: Vector2) !void {
-
+    ///
+    pub fn buildDataless(self: *Self, size: Vector2) !void {
         // Generate texture ID
         c.glGenTextures(1, @ptrCast(*c_uint, &self.id));
 
@@ -130,6 +130,37 @@ pub const OpenGlTexture = struct {
             c.GL_RGB, // Specifies the format of the pixel data
             c.GL_UNSIGNED_BYTE, // Specifies the data type of the pixel data
             null, // void pointer to image data
+        );
+    }
+
+    ///
+    pub fn buildFont(self: *Self, data: [*c]u8, width: u32, rows: u32) !void {
+        // Generate texture ID
+        c.glGenTextures(1, @ptrCast(*c_uint, &self.id));
+
+        // Bind the texture
+        c.glBindTexture(c.GL_TEXTURE_2D, self.id);
+
+        // Set texture parameters
+        c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_S, c.GL_CLAMP_TO_EDGE);
+        c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_T, c.GL_CLAMP_TO_EDGE);
+        c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MIN_FILTER, c.GL_LINEAR);
+        c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MAG_FILTER, c.GL_LINEAR);
+
+        self.width = @intCast(c_int, width);
+        self.height = @intCast(c_int, rows);
+
+        // Generate gl texture
+        c.glTexImage2D(
+            c.GL_TEXTURE_2D, // Texture Target
+            0, // mipmap detail level
+            c.GL_RED, // Specifies the number of color components in texture
+            self.width, // Width of image
+            self.height, // Height of image
+            0, // Boarde NOTE(devon): must be 0
+            c.GL_RED, // Specifies the format of the pixel data
+            c.GL_UNSIGNED_BYTE, // Specifies the data type of the pixel data
+            @ptrCast(?*const c_void, data), // void pointer to image data
         );
     }
 
@@ -166,7 +197,17 @@ pub fn buildOpenGlTexture(allocator: *std.mem.Allocator, path: []const u8) anyer
 pub fn buildDatalessOpenGlTexture(allocator: *std.mem.Allocator, size: Vector2) anyerror!*OpenGlTexture {
     var internal_texture: *OpenGlTexture = try allocator.create(OpenGlTexture);
 
-    try internal_texture.build_dataless(size);
+    try internal_texture.buildDataless(size);
+
+    return internal_texture;
+}
+
+/// Allocates and builds font Opengl Texture implementation
+/// Comments: The dross-zig Texture owns the Texture
+pub fn buildFontOpenGlTexture(allocator: *std.mem.Allocator, data: [*c]u8, width: u32, rows: u32) anyerror!*OpenGlTexture {
+    var internal_texture: *OpenGlTexture = try allocator.create(OpenGlTexture);
+
+    try internal_texture.buildFont(data, width, rows);
 
     return internal_texture;
 }

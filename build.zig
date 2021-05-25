@@ -34,6 +34,13 @@ pub fn build(b: *std.build.Builder) void {
 
     // lib.linkLibC();
     // lib.install();
+    const ft2 = b.addStaticLibrary("ft2", null);
+    ft2.addIncludeDir("libs/freetype");
+    ft2.addIncludeDir("libs/freetype/include");
+    //ft2.addLibPath("libs/freetype/x64_win");
+    //ft2.linkSystemLibrary("libs/freetype/x64_win/freetype");
+    ft2.addCSourceFile("libs/freetype/freetype_impl.c", &[_][]const u8{"--std=c17"});
+    ft2.setBuildMode(mode);
 
     // For executable
     const exe = b.addExecutable("dross-zig", "src/main.zig");
@@ -50,9 +57,21 @@ pub fn build(b: *std.build.Builder) void {
     exe.addIncludeDir("libs/glad");
     exe.addCSourceFile("libs/glad/src/glad.c", &[_][]const u8{"--std=c99"});
 
+    // STB
+    exe.addIncludeDir("libs/stb");
     // STB_IMAGE
-    exe.addIncludeDir("libs/stb_image");
-    exe.addCSourceFile("libs/stb_image/stb_image_impl.c", &[_][]const u8{"--std=c17"});
+    exe.addCSourceFile("libs/stb/stb_image_impl.c", &[_][]const u8{"--std=c17"});
+    // STB_TRUETYPE
+    exe.addCSourceFile("libs/stb/stb_truetype_impl.c", &[_][]const u8{"--std=c17"});
+
+    // FREETYPE
+    exe.addIncludeDir("libs/freetype");
+    exe.addIncludeDir("libs/freetype/include");
+    //exe.addIncludeDir("libs/freetype/src");
+    //exe.addLibPath("libs/freetype/x64_win");
+    //exe.addCSourceFile("libs/freetype/freetype_impl.c", &[_][]const u8{"--std=c17"});
+    exe.linkLibrary(ft2);
+    exe.linkSystemLibrary("libs/freetype/x64_win/freetype");
 
     // ZALGEBRA
     exe.addPackage(.{

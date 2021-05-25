@@ -51,12 +51,29 @@ pub const Texture = struct {
     }
 
     /// Sets up a dataless Texture and allocates any required memory
-    fn build_dataless(self: *Self, allocator: *std.mem.Allocator, size: Vector2) !void {
+    fn buildDataless(self: *Self, allocator: *std.mem.Allocator, size: Vector2) !void {
         switch (selected_api) {
             renderer.BackendApi.OpenGl => {
                 self.gl_texture = gl.buildDatalessOpenGlTexture(allocator, size) catch |err| {
                     std.debug.print("[Texture]: {}\n", .{err});
                     @panic("[Texture]: ERROR occurred when creating a dataless texture!");
+                };
+                self.id = .{
+                    .id_gl = self.gl_texture.?.getId(),
+                };
+            },
+            renderer.BackendApi.Dx12 => {},
+            renderer.BackendApi.Vulkan => {},
+        }
+    }
+
+    /// Setups a font Texture and allocates any required memory
+    fn buildFont(self: *Self, allocator: *std.mem.Allocator, data: [*c]u8, width: u32, rows: u32) !void {
+        switch (selected_api) {
+            renderer.BackendApi.OpenGl => {
+                self.gl_texture = gl.buildFontOpenGlTexture(allocator, data, width, rows) catch |err| {
+                    std.debug.print("[Texture]: {}\n", .{err});
+                    @panic("[Texture]: ERROR occurred when creating a font texture!");
                 };
                 self.id = .{
                     .id_gl = self.gl_texture.?.getId(),
@@ -135,7 +152,18 @@ pub fn buildTexture(allocator: *std.mem.Allocator, name: []const u8, path: []con
 pub fn buildDatalessTexture(allocator: *std.mem.Allocator, size: Vector2) anyerror!*Texture {
     var texture: *Texture = try allocator.create(Texture);
 
-    try texture.build_dataless(allocator, size);
+    try texture.buildDataless(allocator, size);
+
+    return texture;
+}
+
+/// Allocates and builds a dataless texture object depending on the target_api
+/// Comments: The caller owns the Texture
+/// INTERNAL USE ONLY.
+pub fn buildFontTexture(allocator: *std.mem.Allocator, data: [*c]u8, width: u32, rows: u32) anyerror!*Texture {
+    var texture: *Texture = try allocator.create(Texture);
+
+    try texture.buildFont(allocator, data, width, rows);
 
     return texture;
 }

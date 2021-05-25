@@ -9,7 +9,9 @@ _**dross-zig**_ is a bare bones game framework written in :zap:[Zig](https://git
 - GLFW (Window and input)
 - OpenGL (Graphics API)
 - GLAD (OpenGL helper)
-- stb_image (Industry tested image loader)
+- Sean Barrett Collection: 
+	- stb_image (Image Loading)
+	- stb_truetype (Font Loading)
 
 ## Feature TODOs
 - [ ] - Sprite Batching

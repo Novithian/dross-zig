@@ -7,10 +7,13 @@
 
 ### General ###
 - Wrapper for zalgebra vec4
-- Pixel snap
 - Basic Profiler 
+- Revise the engine APIs. Maybe move away from builder functions and opt for in-struct build function.
 
 ### Renderer ###
+- Font Rendering
+- Pixel snap
+- Extract GL structs in the backend to their own zig files
 
 ### Texture ###
 - Texture Atlas
@@ -28,13 +31,16 @@
 ### Audio ###
 - integrate libsoundio or fmod
 
-### Text Rendering ###
-- self-explanatory
-
 ### Window ###
 - Wrapper for window
 
 ## **LOG** ##
+- **[05-24-2021]**
+	- Playing with FreeType2 some more
+- **[05-23-2021]**
+	- Looking into FreeType library
+- **[05-22-2021]**
+	- Exploring font rendering
 - **[05-21-2021]**
 	- Required the passing of the user-defined update event and render event to the run function now rather than exporting the function as it uses the .C calling convension, which does not allow for error return types.
 	- Basic scope timer

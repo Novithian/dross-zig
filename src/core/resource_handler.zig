@@ -2,7 +2,10 @@
 const c = @import("../../c_global.zig").c_imp;
 const std = @import("std");
 // dross-zig
-const Texture = @import("../renderer/texture.zig");
+const tx = @import("../renderer/texture.zig");
+const Texture = tx.Texture;
+const fnt = @import("../renderer/font/font.zig");
+const Font = fnt.Font;
 const fs = @import("../utils/file_loader.zig");
 // ------------------------------------------------
 
@@ -12,8 +15,8 @@ const fs = @import("../utils/file_loader.zig");
 
 /// The allocator used by the ResourceHandler.
 var resource_allocator: *std.mem.Allocator = undefined;
-var texture_map: std.StringHashMap(*Texture.Texture) = undefined;
-var font_map: std.StringHashMap(void) = undefined;
+var texture_map: std.StringHashMap(*Texture) = undefined;
+var font_map: std.StringHashMap(*Font) = undefined;
 
 pub const ResourceHandler = struct {
     /// Builds the ResourceHandler and allocates and required memory.
@@ -23,29 +26,34 @@ pub const ResourceHandler = struct {
         resource_allocator = allocator;
 
         // Initialize the cache maps
-        texture_map = std.StringHashMap(*Texture.Texture).init(allocator);
-        font_map = std.StringHashMap(void).init(allocator);
+        texture_map = std.StringHashMap(*Texture).init(allocator);
+        font_map = std.StringHashMap(*Font).init(allocator);
     }
 
     /// Frees the ResourceHandler and deallocates and required memory.
     pub fn free() void {
         //TODO(devon): loop through and free all textures
-        var iterator = texture_map.iterator();
+        var texture_iter = texture_map.iterator();
+        var font_iter = font_map.iterator();
 
-        while (iterator.next()) |entry| {
+        while (texture_iter.next()) |entry| {
             unloadTexture(entry.key);
         }
 
-        texture_map.deinit();
+        while (font_iter.next()) |entry| {
+            unloadFont(entry.key);
+        }
+
         font_map.deinit();
+        texture_map.deinit();
     }
 
     /// Loads a texture at the given `path` (relative to build/executable).
     /// Comment: All resources allocated by the resource handler are owned
     /// by the ResourceHandler. The returned Texture pointer is owned and 
     /// released by the ResourceHandler.
-    pub fn loadTexture(name: []const u8, path: []const u8) !?*Texture.Texture {
-        var texture: *Texture.Texture = Texture.buildTexture(resource_allocator, name, path) catch |err| {
+    pub fn loadTexture(name: []const u8, path: []const u8) !?*Texture {
+        var texture: *Texture = tx.buildTexture(resource_allocator, name, path) catch |err| {
             std.debug.print("[Resource Handler]: Error occurred when loading texture({s})! {}\n", .{ path, err });
             return err;
         };
@@ -68,9 +76,30 @@ pub const ResourceHandler = struct {
     /// Comment: All resources allocated by the resource handler are owned
     /// by the ResourceHandler. The returned font pointer is owned and 
     /// released by the ResourceHandler.
-    pub fn loadFont(path: []const u8) ?*Texture {}
+    pub fn loadFont(name: []const u8, path: [*c]const u8) ?*Font {
+        var font: *Font = fnt.buildFont(resource_allocator, path) catch |err| {
+            std.debug.print("[Resource Handler]: Error occurred when loading font({s})! {}\n", .{ path, err });
+            return null;
+        };
 
-    pub fn unloadFont() void {}
+        font_map.put(name, font) catch |err| {
+            std.debug.print("[Resource Handler]: Error occurred while adding font({s}) to map!\n", .{path});
+            return null;
+        };
+
+        return font;
+    }
+
+    /// Unloads a font with the name `name`, if found in map.
+    /// Will be called automatically at the end of the application's
+    /// lifetime, but can be used anytime.
+    /// NOTE(devon): Be careful of dangling pointers.
+    pub fn unloadFont(name: []const u8) void {
+        var font_entry = font_map.remove(name);
+
+        font_entry.?.value.free(resource_allocator);
+        resource_allocator.destroy(font_entry.?.value);
+    }
 };
 
 /// Builds and allocates the ResourceHandler for the application.

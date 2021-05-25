@@ -3,9 +3,11 @@ const c = @import("../c_global.zig").c_imp;
 const std = @import("std");
 // dross-rs
 //const Timer = @import("../utils/timer.zig").Timer;
-const gfx = @import("../renderer/renderer.zig");
-const cam = @import("../renderer/cameras/camera_2d.zig");
 const res = @import("resource_handler.zig");
+const gfx = @import("../renderer/renderer.zig");
+const font = @import("../renderer/font/font.zig");
+const Font = font.Font;
+const cam = @import("../renderer/cameras/camera_2d.zig");
 const Vector2 = @import("../core/vector2.zig").Vector2;
 const Vector3 = @import("../core/vector3.zig").Vector3;
 const input = @import("input.zig");
@@ -25,7 +27,7 @@ pub const ApplicationError = error{
 /// TODO(devon): Remove when shipping
 pub var debug_mode = false;
 pub var pause = false;
-
+pub var default_font: ?*Font = undefined;
 /// Stores the current size of the window
 var window_size: Vector2 = undefined;
 
@@ -134,6 +136,8 @@ pub const Application = struct {
         try cam.buildCamera2d(allocator);
 
         try Input.build(allocator);
+
+        default_font = res.ResourceHandler.loadFont("Ubuntu Mono", "assets/fonts/ttf/UbuntuMono.ttf");
     }
 
     /// Gracefully terminates the Application by cleaning up

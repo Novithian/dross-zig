@@ -14,6 +14,9 @@ const Matrix4 = @import("../core/matrix4.zig").Matrix4;
 const Vector3 = @import("../core/vector3.zig").Vector3;
 // -----------------------------------------------------------------------------
 
+// -----------------------------------------
+//      - BackendApi -
+// -----------------------------------------
 /// An enum to keep track of which graphics api is
 /// being used, so the renderer can be api agnostic.
 pub const BackendApi = enum(u8) {
@@ -25,8 +28,35 @@ pub const BackendApi = enum(u8) {
 
 pub const api: BackendApi = BackendApi.OpenGl;
 
+// -----------------------------------------
+//      - RendererErrors -
+// -----------------------------------------
 pub const RendererErrors = error{
     DuplicateRenderer,
+};
+
+// -----------------------------------------
+//      - PackingMode -
+// -----------------------------------------
+pub const PackingMode = enum {
+    /// Affects the packing of pixel data 
+    Pack,
+    /// Affects the unpacking of pixel data
+    Unpack,
+};
+
+// -----------------------------------------
+//      - ByteAlignment -
+// -----------------------------------------
+pub const ByteAlignment = enum {
+    /// Byte-aligned
+    One,
+    /// Rows aligned to even-numbered bytes
+    Two,
+    /// Word-aligned
+    Four,
+    /// Rows start on double-word boundaries
+    Eight,
 };
 
 // -----------------------------------------
@@ -151,6 +181,28 @@ pub const Renderer = struct {
         switch (api) {
             BackendApi.OpenGl => {
                 renderer.gl_backend.?.drawSprite(sprite, position);
+            },
+            BackendApi.Dx12 => {},
+            BackendApi.Vulkan => {},
+        }
+    }
+
+    /// Request to disable byte_alignment restriction
+    pub fn setByteAlignment(packing_mode: PackingMode, alignment: ByteAlignment) void {
+        switch (api) {
+            BackendApi.OpenGl => {
+                renderer.gl_backend.?.setByteAlignment(packing_mode, alignment);
+            },
+            BackendApi.Dx12 => {},
+            BackendApi.Vulkan => {},
+        }
+    }
+
+    /// Clears out the currently bound texture
+    pub fn clearBoundTexture() void {
+        switch (api) {
+            BackendApi.OpenGl => {
+                gl.OpenGlBackend.clearBoundTexture();
             },
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},
