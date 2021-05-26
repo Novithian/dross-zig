@@ -13,7 +13,7 @@
 ### Renderer ###
 - Font Rendering
 - Pixel snap
-- Extract GL structs in the backend to their own zig files
+- Extract Vertex Arrays, Vertex Buffers, Shaders, and Shader Programs to their own files.
 
 ### Texture ###
 - Texture Atlas
@@ -35,6 +35,9 @@
 - Wrapper for window
 
 ## **LOG** ##
+- **[05-25-2021]**
+	- More Font Rendering
+	- Something is on the screen
 - **[05-24-2021]**
 	- Playing with FreeType2 some more
 - **[05-23-2021]**

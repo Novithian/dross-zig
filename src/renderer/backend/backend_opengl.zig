@@ -8,6 +8,10 @@ const Color = @import("../../core/core.zig").Color;
 const texture = @import("../texture.zig");
 const TextureId = texture.TextureId;
 const Sprite = @import("../sprite.zig").Sprite;
+const gly = @import("../font/glyph.zig");
+const Glyph = gly.Glyph;
+const font = @import("../font/font.zig");
+const Font = font.Font;
 const PackingMode = @import("../renderer.zig").PackingMode;
 const ByteAlignment = @import("../renderer.zig").ByteAlignment;
 const Camera = @import("../cameras/camera_2d.zig");
@@ -16,6 +20,7 @@ const Vector3 = @import("../../core/vector3.zig").Vector3;
 const Vector2 = @import("../../core/vector2.zig").Vector2;
 const fs = @import("../../utils/file_loader.zig");
 const rh = @import("../../core/resource_handler.zig");
+const app = @import("../../core/application.zig");
 const Application = @import("../../core/application.zig").Application;
 const framebuffa = @import("../framebuffer.zig");
 const Framebuffer = framebuffa.Framebuffer;
@@ -69,6 +74,8 @@ const default_shader_vs: [:0]const u8 = "assets/shaders/default_shader.vs";
 const default_shader_fs: [:0]const u8 = "assets/shaders/default_shader.fs";
 const screenbuffer_shader_vs: [:0]const u8 = "assets/shaders/screenbuffer_shader.vs";
 const screenbuffer_shader_fs: [:0]const u8 = "assets/shaders/screenbuffer_shader.fs";
+const font_shader_vs: [:0]const u8 = "assets/shaders/font_shader.vs";
+const font_shader_fs: [:0]const u8 = "assets/shaders/font_shader.fs";
 
 
 // -----------------------------------------
@@ -95,6 +102,8 @@ pub const OpenGlBackend = struct {
     shader_program: ?*GlShaderProgram = undefined,
     /// Shader program for drawing the swapchain to the display
     screenbuffer_program: ?*GlShaderProgram = undefined,
+    /// Font Rendering program for drawing text
+    font_renderer_program: ?*GlShaderProgram = undefined,
 
     vertex_array: ?*GlVertexArray = undefined,
     vertex_buffer: ?*GlVertexBuffer = undefined,
@@ -102,6 +111,10 @@ pub const OpenGlBackend = struct {
 
     screenbuffer_vertex_array: ?*GlVertexArray = undefined,
     screenbuffer_vertex_buffer: ?*GlVertexBuffer = undefined,
+
+    font_renderer_vertex_array: ?*GlVertexArray = undefined,
+    font_renderer_vertex_buffer: ?*GlVertexBuffer = undefined,
+
 
     clear_color: Color = undefined,
     default_draw_color: Color = undefined,
@@ -122,9 +135,10 @@ pub const OpenGlBackend = struct {
         // of subsequent glReadPixel as well as unpacking texture patterns.
         //c.glPixelStorei(c.GL_UNPACK_ALIGNMENT, 1);
         self.setByteAlignment(PackingMode.Unpack, ByteAlignment.One);
-
+        
         // Enable depth testing
         c.glEnable(c.GL_DEPTH_TEST);
+        c.glEnable(c.GL_BLEND);
         c.glBlendFunc(c.GL_SRC_ALPHA, c.GL_ONE_MINUS_SRC_ALPHA);
 
         // Allocate and compile the vertex shader
@@ -137,6 +151,11 @@ pub const OpenGlBackend = struct {
         try screenbuffer_vertex_shader.source(screenbuffer_shader_vs);
         try screenbuffer_vertex_shader.compile();
 
+        // Allocate and compile the vertex shader for the font rendering
+        var font_renderer_vertex_shader: *GlShader = try buildGlShader(allocator, GlShaderType.Vertex);
+        try font_renderer_vertex_shader.source(font_shader_vs);
+        try font_renderer_vertex_shader.compile();
+
         // Allocate and compile the fragment shader
         var fragment_shader: *GlShader = try buildGlShader(allocator, GlShaderType.Fragment);
         try fragment_shader.source(default_shader_fs);
@@ -147,6 +166,12 @@ pub const OpenGlBackend = struct {
         try screenbuffer_fragment_shader.source(screenbuffer_shader_fs);
         try screenbuffer_fragment_shader.compile();
         
+        // Allocate and compile the fragment shader for the font rendering
+        var font_renderer_fragment_shader: *GlShader = try buildGlShader(allocator, GlShaderType.Fragment);
+        try font_renderer_fragment_shader.source(font_shader_fs);
+        try font_renderer_fragment_shader.compile();
+
+
         // Default shader program setup
         // ---------------------------------------------------
 
@@ -189,13 +214,39 @@ pub const OpenGlBackend = struct {
         defer allocator.destroy(screenbuffer_vertex_shader);
         defer allocator.destroy(screenbuffer_fragment_shader);
 
+        // Font Renderer shader program setup
+        // ----------------------------------------------------
+
+        // Allocate memory for the shader program
+        self.font_renderer_program = try buildGlShaderProgram(allocator);
+
+        // Attach the shaders to the shader program
+        self.font_renderer_program.?.attach(font_renderer_vertex_shader);
+        self.font_renderer_program.?.attach(font_renderer_fragment_shader);
+
+        // Link the shader program
+        try self.font_renderer_program.?.link();
+
+        // Allow the shader to call the OpenGL-related cleanup functions
+        font_renderer_vertex_shader.free();
+        font_renderer_fragment_shader.free();
+
+        // Free the memory as they are no longer needed
+        defer allocator.destroy(font_renderer_vertex_shader);
+        defer allocator.destroy(font_renderer_fragment_shader);
+
 
         // Create VAO, VBO, and IB
+        // -----------------------------------------------------
         self.vertex_array = try buildGlVertexArray(allocator);
         self.vertex_buffer = try buildGlVertexBuffer(allocator);
         self.index_buffer = try buildGlIndexBuffer(allocator);
+        // --
         self.screenbuffer_vertex_array = try buildGlVertexArray(allocator);
         self.screenbuffer_vertex_buffer = try buildGlVertexBuffer(allocator);
+        // --
+        self.font_renderer_vertex_array = try buildGlVertexArray(allocator);
+        self.font_renderer_vertex_buffer = try buildGlVertexBuffer(allocator);
 
         // Bind VAO
         // NOTE(devon): Order matters! Bind VAO first, and unbind last!
@@ -257,6 +308,7 @@ pub const OpenGlBackend = struct {
         // Unbind the EBO
 
         // Setup screenbuffer VAO/VBO
+        // ---------------------------------------------------
         self.screenbuffer_vertex_array.?.bind();
         self.screenbuffer_vertex_buffer.?.bind();
         var screenbuffer_vertices_slice = screenbuffer_vertices[0..];
@@ -302,6 +354,28 @@ pub const OpenGlBackend = struct {
 
         framebuffa.Framebuffer.resetFramebuffer();
 
+
+        // Font Renderer
+        // ------------------------------------------
+        self.font_renderer_vertex_array.?.bind();
+        self.font_renderer_vertex_buffer.?.bind();
+        // 6 vertices of 4 floats each
+        self.font_renderer_vertex_buffer.?.dataless(6 * 4, GlBufferUsage.DynamicDraw);
+
+        c.glEnableVertexAttribArray(index_zero);
+
+        c.glVertexAttribPointer(
+            index_zero, 
+            4,
+            c.GL_FLOAT,
+            c.GL_FALSE,
+            @intCast(c_longlong, @sizeOf(f32) * 4),
+            @intToPtr(?*c_void, 0), // Offset
+        );
+
+        // Unbind VBO
+        c.glBindBuffer(c.GL_ARRAY_BUFFER, index_zero);
+
         // Unbind the VAO
         c.glBindVertexArray(index_zero);
 
@@ -319,24 +393,33 @@ pub const OpenGlBackend = struct {
     /// Frees up any resources that was previously allocated
     pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
         // Allow for OpenGL object to de-allocate any memory it needed
+        // -- Default
         self.vertex_array.?.free();
         self.vertex_buffer.?.free();
         self.index_buffer.?.free();
         self.shader_program.?.free();
-        self.screenbuffer_vertex_array.?.free();
-        self.screenbuffer_vertex_buffer.?.free();
-        self.screenbuffer_program.?.free();
-        self.screenbuffer.?.free(allocator);
-
-        // Free memory
         allocator.destroy(self.vertex_array.?);
         allocator.destroy(self.vertex_buffer.?);
         allocator.destroy(self.index_buffer.?);
         allocator.destroy(self.shader_program.?);
+        // - Screenbuffer
+        self.screenbuffer_vertex_array.?.free();
+        self.screenbuffer_vertex_buffer.?.free();
+        self.screenbuffer_program.?.free();
+        self.screenbuffer.?.free(allocator);
         allocator.destroy(self.screenbuffer_vertex_array.?);
         allocator.destroy(self.screenbuffer_vertex_buffer.?);
         allocator.destroy(self.screenbuffer_program.?);
         allocator.destroy(self.screenbuffer.?);
+
+        // - Font Renderer
+        self.font_renderer_vertex_array.?.free();
+        self.font_renderer_vertex_buffer.?.free();
+        self.font_renderer_program.?.free();
+        allocator.destroy(self.font_renderer_vertex_array.?);
+        allocator.destroy(self.font_renderer_vertex_buffer.?);
+        allocator.destroy(self.font_renderer_program.?);
+        
     }
     
     /// Setups up the OpenGL specific components for rendering
@@ -350,7 +433,6 @@ pub const OpenGlBackend = struct {
         c.glEnable(c.GL_DEPTH_TEST);
 
          // Tell OpenGL which shader program's pipeline we want to use
-        self.shader_program.?.use();
 
         const camera_pos = camera.getPosition();
         const camera_target = camera.getTargetPosition();
@@ -363,6 +445,7 @@ pub const OpenGlBackend = struct {
         // const projection = Matrix4.identity().scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
         // const window_size = Application.getWindowSize();
         const viewport_size = Application.getViewportSize();
+        const window_size = Application.getWindowSize();
         // const aspect_ratio_w = window_size.getX() / window_size.getY();
         // const aspect_ratio_h = window_size.getY() / window_size.getX();
 
@@ -384,11 +467,23 @@ pub const OpenGlBackend = struct {
             -1.0, //Near
             1.0, // Far
         ); 
-     
+
+        const ui_projection = Matrix4.orthographic(
+            0, // Left
+            window_size.getX(), // Right
+            0, // top
+            window_size.getY(), // bottom
+            -1.0, //Near
+            1.0, // Far
+        ); 
         // Set up the view matrix
         // const view = Matrix4.fromTranslate(camera_pos).scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
         var view = Matrix4.fromTranslate(camera_pos).scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
+        
+        self.font_renderer_program.?.use();
+        self.font_renderer_program.?.setMatrix4("projection", ui_projection);
 
+        self.shader_program.?.use();
         self.shader_program.?.setMatrix4("projection", projection);
         self.shader_program.?.setMatrix4("view", view);
     }
@@ -529,6 +624,84 @@ pub const OpenGlBackend = struct {
         self.drawIndexed(self.vertex_array.?);
     }
 
+    /// Sets up the renderer to be able to draw text
+    pub fn drawText(self: *Self, text: []const u8, x: f32, y: f32, scale: f32, color: Color) void {
+        // Clear the currently bound framebuffer
+        //framebuffa.Framebuffer.resetFramebuffer();
+
+        // Use Text Rendering shader program
+        self.font_renderer_program.?.use();
+        
+        // Pass the text color
+        self.font_renderer_program.?.setFloat3("text_color", color.r, color.g, color.b);
+
+        // Activate Texture Slot 0
+        c.glActiveTexture(c.GL_TEXTURE0);
+
+        // Bind vao
+        self.font_renderer_vertex_array.?.bind();
+
+        // Loops through and draw
+        var text_length = text.len;
+        var index: usize = 0;
+        var cursor_x = x;
+        
+        while(index < text_length) : (index += 1) {
+            const character: u8 = text[index];
+            const glyph = app.default_font.?.getGlyph(character) catch |err| {
+                std.debug.print("[Renderer]: Error occurred when retrieving glyph {}! {s}\n", .{character, err});
+                @panic("[Renderer]: Failed to find glyph!");
+            };
+
+            const offset = glyph.getOffset();
+            const glyph_width = @intToFloat(f32, glyph.getWidth());
+            const glyph_rows = @intToFloat(f32, glyph.getRows());
+            const x_pos = cursor_x + offset.getX() * scale;
+            const y_pos = y - (glyph_rows - offset.getY()) * scale;
+            const advance = glyph.getAdvance();
+            const width = glyph_width * scale;
+            const height = glyph_rows * scale;
+            
+            //zig fmt: off
+            const vertices: [24]f32 = [24]f32 {
+            //  Position                            Texture Coords
+                x_pos,          y_pos + height,         0.0, 0.0,
+                x_pos,          y_pos,                  0.0, 1.0,
+                x_pos + width,  y_pos,                  1.0, 1.0,
+
+                x_pos,          y_pos + height,         0.0, 0.0,
+                x_pos + width,  y_pos,                  1.0, 1.0,
+                x_pos + width,  y_pos + height,         1.0, 0.0,
+            };
+
+            const vertices_slice = vertices[0..];
+
+            // Bind Texture
+            c.glBindTexture(c.GL_TEXTURE_2D, glyph.getTexture().?.getId().id_gl);
+
+            // Update VBO
+            self.font_renderer_vertex_buffer.?.bind();
+            self.font_renderer_vertex_buffer.?.subdata(vertices_slice);
+            GlVertexBuffer.clearBoundVertexBuffer();
+
+            // Draw
+            c.glDrawArrays(c.GL_TRIANGLES, 0, 6);
+            
+            const shifted = @intToFloat(f32, (advance >> 6)) * scale;
+            // Advance the cursor
+            cursor_x += shifted;
+        }
+
+        // Clear the bound vao and texture
+        GlVertexArray.clearBoundVertexArray();
+        clearBoundTexture();
+
+        // Re-bind framebuffer
+        //self.screenbuffer.?.bind(framebuffa.FramebufferType.Both);
+
+       
+    }
+
     /// Draws geometry with a index buffer
     pub fn drawIndexed(self: *Self, vertex_array: *GlVertexArray) void {
         const offset = @intToPtr(?*c_void, 0);
@@ -575,10 +748,12 @@ pub const OpenGlBackend = struct {
         c.glPixelStorei(pack_type, alignment);
     }
 
-    /// Clears the out the currently bound texture
+    /// Clears out the currently bound texture
     pub fn clearBoundTexture() void {
         c.glBindTexture(c.GL_TEXTURE_2D, 0);
     }
+
+    
 };
 
 /// Resizes the viewport to the given size and position 
@@ -644,6 +819,26 @@ const GlVertexBuffer = struct {
         const vertices_size = @intCast(c_longlong, @sizeOf(f32) * vertices.len);
 
         c.glBufferData(c.GL_ARRAY_BUFFER, vertices_size, vertices_ptr, @enumToInt(usage));
+    }
+    
+    /// Allocates memory within the the currently bound buffer object.
+    /// `length` is the amount of floats to reserve.
+    pub fn dataless(self: GlVertexBuffer,  length: f32, usage: GlBufferUsage) void {
+        const size = @floatToInt(c_longlong, @sizeOf(f32) * length);
+
+        c.glBufferData(c.GL_ARRAY_BUFFER, size, null, @enumToInt(usage));
+    }
+
+    ///
+    pub fn subdata(self: GlVertexBuffer, vertices: []const f32) void {
+        const size = @intCast(c_longlong, @sizeOf(f32) * vertices.len);
+        const ptr = @ptrCast(*const c_void, vertices.ptr);
+        c.glBufferSubData(c.GL_ARRAY_BUFFER, 0, size, ptr);
+    }
+    
+    /// Clears out the currently bound Vertex Buffer
+    pub fn clearBoundVertexBuffer() void {
+        c.glBindBuffer(c.GL_ARRAY_BUFFER, 0);
     }
 };
 
@@ -722,6 +917,11 @@ const GlVertexArray = struct {
     /// Binds the Vertex Array
     pub fn bind(self: *GlVertexArray) void {
         c.glBindVertexArray(self.handle);
+    }
+
+    /// Clears out the currently bound Vertex Array
+    pub fn clearBoundVertexArray() void {
+        c.glBindVertexArray(0);
     }
 };
 

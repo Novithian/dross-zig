@@ -40,6 +40,12 @@ const ground_color: Color = .{
     .b = 0.14510,
 };
 
+const white: Color = .{
+    .r = 1.0,
+    .g = 1.0,
+    .b = 1.0,
+};
+
 //const ground_color: Color = .{
 //    .r = 0.58431,
 //    .g = 0.47834,
@@ -147,4 +153,7 @@ pub fn render() anyerror!void {
     Renderer.drawSprite(quad_sprite_two, quad_position_two);
     Renderer.drawSprite(indicator_sprite, indicator_position);
     Renderer.drawColoredQuad(ground_position, ground_scale, ground_color);
+    //Renderer.drawText("Eat Ass", 5.0, 5.0, 0.1, white);
+    Renderer.drawText("Eat Ass", 5.0, 5.0, 0.2, white);
+    Renderer.drawText("Kayla is wild!~", 5.0, 50.0, 0.2, white);
 }

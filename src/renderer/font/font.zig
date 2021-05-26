@@ -24,7 +24,7 @@ pub const Font = struct {
     size: Vector2 = undefined,
     offset: Vector2 = undefined,
 
-    glyphs: std.AutoHashMap(c_ulong, *Glyph),
+    glyphs: std.AutoHashMap(u32, *Glyph),
 
     // FreeType
     library: ?*c.FT_Library,
@@ -64,27 +64,28 @@ pub const Font = struct {
 
         // Set the font's pixel size
         // NOTE(devon): Giving it a pixel width of 0 will force it to be dynamically calculated.
-        const pixel_size_error = c.FT_Set_Pixel_Sizes(self.face.?.*, 0, 48); // face, pixel_width, pixel_height
+        const pixel_size_error = c.FT_Set_Pixel_Sizes(self.face.?.*, 0, 84); // face, pixel_width, pixel_height
         if (pixel_size_error != 0) @panic("[Font]: Error occurred when setting the pixel size!");
 
         // Set the unpack byte alignment to 1 byte
         Renderer.setByteAlignment(PackingMode.Unpack, ByteAlignment.One);
 
         // Initialize the glyph hashmap
-        self.glyphs = std.AutoHashMap(c_ulong, *Glyph).init(allocator);
+        self.glyphs = std.AutoHashMap(u32, *Glyph).init(allocator);
 
         // Loop through and setup the glyphs
-        const number_of_glyphs = 94;
-        var character: c_ulong = 0;
-        while (character < 94) : (character += 1) {
+        const number_of_glyphs = 128;
+        const start_offset = 32;
+        var character: u32 = start_offset;
+        while (character < start_offset + number_of_glyphs) : (character += 1) {
             // Load the glyph
-            const char_load_error = c.FT_Load_Char(self.face.?.*, character, c.FT_LOAD_RENDER);
+            const char_load_error = c.FT_Load_Char(self.face.?.*, @intCast(c_ulong, character), c.FT_LOAD_RENDER);
             if (char_load_error != 0) @panic("[Font]: Error occurred when loading glyph!");
             const glyph_width = @intCast(u32, self.face.?.*.*.glyph.*.bitmap.width);
             const glyph_rows = @intCast(u32, self.face.?.*.*.glyph.*.bitmap.rows);
-            const glyph_offset_x = @intCast(u32, self.face.?.*.*.glyph.*.bitmap_left);
-            const glyph_offset_y = @intCast(u32, self.face.?.*.*.glyph.*.bitmap_top);
-            const glyph_x_advance = @intCast(u32, self.face.?.*.*.glyph.*.bitmap_top);
+            const glyph_offset_x = @intCast(i32, self.face.?.*.*.glyph.*.bitmap_left);
+            const glyph_offset_y = @intCast(i32, self.face.?.*.*.glyph.*.bitmap_top);
+            const glyph_x_advance = @intCast(u32, self.face.?.*.*.glyph.*.advance.x);
             const buffer_data = self.face.?.*.*.glyph.*.bitmap.buffer;
 
             // Generate Texture
@@ -114,6 +115,11 @@ pub const Font = struct {
 
         allocator.destroy(self.face.?);
         allocator.destroy(self.library.?);
+    }
+
+    /// Returns a pointer to the glyph
+    pub fn getGlyph(self: *Self, glyph: u8) !*Glyph {
+        return self.glyphs.get(@intCast(c_ulong, glyph)).?;
     }
 };
 

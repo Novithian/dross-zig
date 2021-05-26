@@ -187,6 +187,17 @@ pub const Renderer = struct {
         }
     }
 
+    /// Sets up the renderer to be able to draw text
+    pub fn drawText(text: []const u8, x: f32, y: f32, scale: f32, color: Color) void {
+        switch (api) {
+            BackendApi.OpenGl => {
+                renderer.gl_backend.?.drawText(text, x, y, scale, color);
+            },
+            BackendApi.Dx12 => {},
+            BackendApi.Vulkan => {},
+        }
+    }
+
     /// Request to disable byte_alignment restriction
     pub fn setByteAlignment(packing_mode: PackingMode, alignment: ByteAlignment) void {
         switch (api) {
