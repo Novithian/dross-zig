@@ -4,14 +4,16 @@
 
 ## **TODO** ##
 
-
 ### General ###
 - Wrapper for zalgebra vec4
-- Basic Profiler 
 - Revise the engine APIs. Maybe move away from builder functions and opt for in-struct build function.
 
 ### Renderer ###
 - Font Rendering
+	- Re-iterate to force an entire text render to a single draw call.
+	- Combined to only use a single texture bind
+	- Helper function to get text height
+	- Helper function to get text width
 - Pixel snap
 - Extract Vertex Arrays, Vertex Buffers, Shaders, and Shader Programs to their own files.
 
@@ -35,6 +37,16 @@
 - Wrapper for window
 
 ## **LOG** ##
+- **[05-27-2021]**
+	- Fixed font rendering scaling
+	- GUI Render event
+	- String helpers such as format
+	- Allow for quad drawing on the gui layer
+	- Let GUI elements use the alpha value
+- **[05-26-2021]**
+	- Setting up some more basic profiling
+	- Started brainstorming API formatting via api_formatting.md
+	- Frame stats
 - **[05-25-2021]**
 	- More Font Rendering
 	- Something is on the screen

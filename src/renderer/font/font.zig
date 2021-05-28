@@ -64,7 +64,7 @@ pub const Font = struct {
 
         // Set the font's pixel size
         // NOTE(devon): Giving it a pixel width of 0 will force it to be dynamically calculated.
-        const pixel_size_error = c.FT_Set_Pixel_Sizes(self.face.?.*, 0, 84); // face, pixel_width, pixel_height
+        const pixel_size_error = c.FT_Set_Pixel_Sizes(self.face.?.*, 0, 24); // face, pixel_width, pixel_height
         if (pixel_size_error != 0) @panic("[Font]: Error occurred when setting the pixel size!");
 
         // Set the unpack byte alignment to 1 byte

@@ -43,4 +43,40 @@ pub const Color = struct {
     pub fn toVector3(self: Self) Vector3 {
         return Vector3.new(self.r, self.g, self.b);
     }
+
+    pub fn red() Self {
+        return .{
+            .r = 1.0,
+            .g = 0.0,
+            .b = 0.0,
+            .a = 1.0,
+        };
+    }
+
+    pub fn white() Self {
+        return .{
+            .r = 1.0,
+            .g = 1.0,
+            .b = 1.0,
+            .a = 1.0,
+        };
+    }
+
+    pub fn gray() Self {
+        return .{
+            .r = 0.28,
+            .g = 0.28,
+            .b = 0.28,
+            .a = 1.0,
+        };
+    }
+
+    pub fn darkGray() Self {
+        return .{
+            .r = 0.12,
+            .g = 0.12,
+            .b = 0.12,
+            .a = 1.0,
+        };
+    }
 };

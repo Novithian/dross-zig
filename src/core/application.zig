@@ -14,6 +14,7 @@ const input = @import("input.zig");
 const Input = input.Input;
 const DrossKey = input.DrossKey;
 const DrossMouseButton = input.DrossMouseButton;
+const FrameStatistics = @import("../utils/profiling/frame_statistics.zig").FrameStatistics;
 // ----------------------------------------------------
 
 /// Error Set for Application-related Errors
@@ -28,6 +29,8 @@ pub const ApplicationError = error{
 pub var debug_mode = false;
 pub var pause = false;
 pub var default_font: ?*Font = undefined;
+pub var frame_stats: ?*FrameStatistics = undefined;
+
 /// Stores the current size of the window
 var window_size: Vector2 = undefined;
 
@@ -51,41 +54,71 @@ pub const Application = struct {
     previous_frame_time: f64 = 0,
 
     /// Runs the applications main event loop. 
-    pub fn run(self: *Application, update_loop: fn (f64) anyerror!void, render_loop: fn () anyerror!void) void {
+    pub fn run(
+        self: *Application,
+        update_loop: fn (f64) anyerror!void,
+        render_loop: fn () anyerror!void,
+        gui_render_loop: fn () anyerror!void,
+    ) void {
         while (c.glfwWindowShouldClose(window) == 0) {
             // Profiling
-            var timer = std.time.Timer.start() catch |err| {
+            var frame_timer = std.time.Timer.start() catch |err| {
                 std.debug.print("[Application]: Error occurred when creating a timer! {s}\n", .{err});
                 @panic("[Application]: Error occurred creating a timer!\n");
             };
+
+            var frame_duration: f64 = -1.0;
+            var update_duration: f64 = -1.0;
+            var draw_duration: f64 = -1.0;
 
             // Calculate timestep
             const current_time = c.glfwGetTime();
             var delta = current_time - self.previous_frame_time;
             self.previous_frame_time = current_time;
 
-            // TODO(devon): Remove when shipping
+            //// TODO(devon): Remove when shipping
             if (debug_mode and pause) delta = 0;
 
-            // Process input
+            //// Process input
             self.processInput(delta);
 
-            _ = update_loop(delta) catch |err| {
-                std.debug.print("[Application]: Update loop encountered an error! {s}\n", .{err});
-                @panic("[Application]: Error occurred during the update loop!\n");
-            };
+            { // Update
+                var update_timer = std.time.Timer.start() catch |err| {
+                    std.debug.print("[Application]: Error occurred when creating a timer! {s}\n", .{err});
+                    @panic("[Application]: Error occurred creating a timer!\n");
+                };
 
-            // Render
-            gfx.Renderer.render(render_loop);
+                _ = update_loop(delta) catch |err| {
+                    std.debug.print("[Application]: Update loop encountered an error! {s}\n", .{err});
+                    @panic("[Application]: Error occurred during the update loop!\n");
+                };
+
+                update_duration = @intToFloat(f64, update_timer.read()) / @intToFloat(f64, std.time.ns_per_ms);
+            }
+
+            { // Render
+                var draw_timer = std.time.Timer.start() catch |err| {
+                    std.debug.print("[Application]: Error occurred when creating a timer! {s}\n", .{err});
+                    @panic("[Application]: Error occurred creating a timer!\n");
+                };
+
+                gfx.Renderer.render(render_loop, gui_render_loop);
+
+                draw_duration = @intToFloat(f64, draw_timer.read()) / @intToFloat(f64, std.time.ns_per_ms);
+            }
 
             // Submit
             c.glfwSwapBuffers(window);
             Input.updateInput();
             c.glfwPollEvents();
 
-            const end_time = timer.read();
-            const duration = end_time / std.time.ns_per_ms;
-            std.debug.print("[Timer][Update]: Duration {} ms\n", .{duration});
+            frame_duration = @intToFloat(f64, frame_timer.read()) / @intToFloat(f64, std.time.ns_per_ms);
+
+            FrameStatistics.setFrameTime(frame_duration);
+            FrameStatistics.setUpdateTime(update_duration);
+            FrameStatistics.setDrawTime(draw_duration);
+            //FrameStatistics.display();
+            FrameStatistics.reset();
         }
     }
 
@@ -116,6 +149,10 @@ pub const Application = struct {
         // Make our window the current context
         c.glfwMakeContextCurrent(window);
 
+        // Change the wait time for swapping buffers 0
+        // TODO(devon): Remove when shipping
+        c.glfwSwapInterval(0);
+
         // Build the Resource Hanlder
         res.ResourceHandler.build(allocator);
 
@@ -137,7 +174,9 @@ pub const Application = struct {
 
         try Input.build(allocator);
 
-        default_font = res.ResourceHandler.loadFont("Ubuntu Mono", "assets/fonts/ttf/UbuntuMono.ttf");
+        try FrameStatistics.build(allocator);
+
+        default_font = res.ResourceHandler.loadFont("Ubuntu Mono", "assets/fonts/ttf/UbuntuMono.ttf") orelse null;
     }
 
     /// Gracefully terminates the Application by cleaning up
@@ -151,6 +190,7 @@ pub const Application = struct {
         c.glfwTerminate();
 
         // Manually allocated memory cleanup
+        FrameStatistics.destroy(self.allocator.?);
         Input.free(self.allocator.?);
         cam.freeAllCamera2d(self.allocator.?);
         try gfx.freeRenderer(self.allocator.?);

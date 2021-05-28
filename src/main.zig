@@ -112,7 +112,7 @@ pub fn main() anyerror!u8 {
     Renderer.changeClearColor(background_color);
 
     // Begin the game loop
-    app.*.run(update, render);
+    app.*.run(update, render, gui_render);
 
     return 0;
 }
@@ -153,7 +153,9 @@ pub fn render() anyerror!void {
     Renderer.drawSprite(quad_sprite_two, quad_position_two);
     Renderer.drawSprite(indicator_sprite, indicator_position);
     Renderer.drawColoredQuad(ground_position, ground_scale, ground_color);
-    //Renderer.drawText("Eat Ass", 5.0, 5.0, 0.1, white);
-    Renderer.drawText("Eat Ass", 5.0, 5.0, 0.2, white);
-    Renderer.drawText("Kayla is wild!~", 5.0, 50.0, 0.2, white);
+}
+
+/// Defines the game-level gui rendering
+pub fn gui_render() anyerror!void {
+    Renderer.drawText("Eat Ass", 5.0, 5.0, 1.0, white);
 }

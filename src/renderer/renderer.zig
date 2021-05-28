@@ -5,13 +5,16 @@ const za = @import("zalgebra");
 
 // dross-zig
 const gl = @import("backend/backend_opengl.zig");
-const Application = @import("../core/application.zig").Application;
+const app = @import("../core/application.zig");
+const Application = app.Application;
 const TextureId = @import("texture.zig").TextureId;
 const Sprite = @import("sprite.zig").Sprite;
 const Color = @import("../core/core.zig").Color;
 const Camera = @import("../renderer/cameras/camera_2d.zig");
 const Matrix4 = @import("../core/matrix4.zig").Matrix4;
 const Vector3 = @import("../core/vector3.zig").Vector3;
+const FrameStatistics = @import("../utils/profiling/frame_statistics.zig").FrameStatistics;
+const String = @import("../utils/strings.zig");
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------
@@ -96,17 +99,80 @@ pub const Renderer = struct {
 
     /// Handles the rendering process
     /// Comments: INTERNAL use only.
-    pub fn render(render_loop: fn () anyerror!void) void {
+    pub fn render(render_loop: fn () anyerror!void, gui_render_loop: fn () anyerror!void) void {
         var camera = Camera.getCurrentCamera();
         // Prepare for the user defined render
         Renderer.beginRender(camera.?);
+
         // Call user-defined render
         _ = render_loop() catch |err| {
             std.debug.print("[Renderer]: Render event encountered an error! {s}\n", .{err});
             @panic("[Renderer]: Error occurred during the user-defined render event!\n");
         };
-        // Clean up
+
+        // Submit the framebuffer to be renderered
         Renderer.endRender();
+
+        // Call user-defined gui render
+        _ = gui_render_loop() catch |err| {
+            std.debug.print("[Renderer]: Render event encountered an error! {s}\n", .{err});
+            @panic("[Renderer]: Error occurred during the user-defined render event!\n");
+        };
+
+        // Profiling stats
+        if (!app.debug_mode) return;
+
+        const window_size = Application.getWindowSize();
+        const string_height = 30.0;
+        const top_padding = 0.0;
+        const left_padding = 20.0;
+        const window_size_y = window_size.getY();
+        const background_size = Vector3.new(window_size.getX() * 0.25, 100 + top_padding + (string_height * 5.0), 0.0);
+        var background_color = Color.darkGray();
+        const background_opacity = 0.5;
+        background_color.a = background_opacity;
+
+        // Draw background window
+        Renderer.drawColoredQuadGui(Vector3.new(0.0, window_size_y - background_size.getY(), 0.0), background_size, background_color);
+
+        // Populate Stats
+        const frame_time: f64 = FrameStatistics.getFrameTime();
+        const update_time: f64 = FrameStatistics.getUpdateTime();
+        const draw_time: f64 = FrameStatistics.getDrawTime();
+        var draw_calls: i64 = FrameStatistics.getDrawCalls();
+        var quad_count: i64 = FrameStatistics.getQuadCount();
+
+        var frame_time_buffer: [128]u8 = undefined;
+        var update_time_buffer: [128]u8 = undefined;
+        var draw_time_buffer: [128]u8 = undefined;
+        var draw_calls_buffer: [128]u8 = undefined;
+        var quad_count_buffer: [128]u8 = undefined;
+
+        var frame_time_string = String.format(&frame_time_buffer, "Frame (ms): {d:5}", .{frame_time});
+        var update_time_string = String.format(&update_time_buffer, "User Update (ms): {d:5}", .{update_time});
+        var draw_time_string = String.format(&draw_time_buffer, "Draw (ms): {d:6}", .{draw_time});
+
+        // TODO(devon): REMOVE AFTER OPTIMIZING FONT RENDERING TO BATCHED CALLS
+        draw_calls += @intCast(i64, frame_time_string.len);
+        draw_calls += @intCast(i64, update_time_string.len);
+        draw_calls += @intCast(i64, draw_time_string.len);
+        draw_calls += @intCast(i64, 14);
+        draw_calls += @intCast(i64, 14);
+        quad_count += @intCast(i64, frame_time_string.len);
+        quad_count += @intCast(i64, update_time_string.len);
+        quad_count += @intCast(i64, draw_time_string.len);
+        quad_count += @intCast(i64, 14);
+        quad_count += @intCast(i64, 14);
+
+        var draw_calls_string = String.format(&draw_calls_buffer, "Draw Calls: {}", .{draw_calls});
+        var quad_count_string = String.format(&quad_count_buffer, "Quad Count: {}", .{quad_count});
+
+        // Draw Stats
+        Renderer.drawText(frame_time_string, left_padding, window_size_y - top_padding - (string_height * 1.0), 1.0, Color.white());
+        Renderer.drawText(update_time_string, left_padding, window_size_y - top_padding - (string_height * 2.0), 1.0, Color.white());
+        Renderer.drawText(draw_time_string, left_padding, window_size_y - top_padding - (string_height * 3.0), 1.0, Color.white());
+        Renderer.drawText(draw_calls_string, left_padding, window_size_y - top_padding - (string_height * 4.0), 1.0, Color.white());
+        Renderer.drawText(quad_count_string, left_padding, window_size_y - top_padding - (string_height * 5.0), 1.0, Color.white());
     }
 
     /// Flags and sets up for the start of the user-defined render event
@@ -165,6 +231,17 @@ pub const Renderer = struct {
             BackendApi.Vulkan => {},
         }
     }
+
+    pub fn drawColoredQuadGui(position: Vector3, size: Vector3, color: Color) void {
+        switch (api) {
+            BackendApi.OpenGl => {
+                renderer.gl_backend.?.drawColoredQuadGui(position, size, color);
+            },
+            BackendApi.Dx12 => {},
+            BackendApi.Vulkan => {},
+        }
+    }
+
     /// Sets up renderer to be able to draw a textured quad.
     pub fn drawTexturedQuad(id: TextureId, position: Vector3) void {
         switch (api) {
