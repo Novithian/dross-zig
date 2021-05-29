@@ -38,6 +38,7 @@ const ground_color: Color = .{
     .r = 0.08235,
     .g = 0.12157,
     .b = 0.14510,
+    .a = 1.0,
 };
 
 const white: Color = .{
@@ -67,7 +68,7 @@ pub fn main() anyerror!u8 {
     }
 
     // Create the application
-    app = try buildApplication(
+    app = try Application.new(
         allocator,
         APP_TITLE,
         APP_WINDOW_WIDTH,
@@ -77,19 +78,12 @@ pub fn main() anyerror!u8 {
     );
 
     // Clean up the allocated application before exiting
-    defer allocator.destroy(app);
-
-    // NOTE(devon): Defer executes in the opposite order of the
-    // calls, so app.free will be executed before allocator.destroy
-    // Tells the program to free the app before exiting for
-    // proper clean-up.
-    defer app.*.free();
+    defer Application.free(allocator, app);
 
     // Setup
-    const camera_op = getCurrentCamera();
-    camera = camera_op orelse return CameraError.CameraNotFound;
+    camera = try Camera2d.new(allocator);
 
-    player = try Player.build(allocator);
+    player = try Player.new(allocator);
 
     quad_sprite_two = try buildSprite(allocator, "enemy_01_idle", "assets/sprites/s_enemy_01_idle.png");
     indicator_sprite = try buildSprite(allocator, "indicator", "assets/sprites/s_ui_indicator.png");
@@ -98,11 +92,10 @@ pub fn main() anyerror!u8 {
     //indicator_sprite.*.setOrigin(Vector2.new(8.0, 11.0));
     //indicator_sprite.*.setAngle(30.0);
 
-    defer allocator.destroy(player);
     defer allocator.destroy(quad_sprite_two);
     defer allocator.destroy(indicator_sprite);
 
-    defer player.free(allocator);
+    defer Player.free(allocator, player);
     defer quad_sprite_two.*.free(allocator);
     defer indicator_sprite.*.free(allocator);
 
@@ -112,7 +105,7 @@ pub fn main() anyerror!u8 {
     Renderer.changeClearColor(background_color);
 
     // Begin the game loop
-    app.*.run(update, render, gui_render);
+    app.run(update, render, gui_render);
 
     return 0;
 }
@@ -139,8 +132,8 @@ pub fn update(delta: f64) anyerror!void {
     // const camera_smoothing = 0.075;
 
     // const new_camera_position = Vector3.new(
-    //     lerp(old_camera_position.getX(), -quad_position.getX(), camera_smoothing),
-    //     lerp(old_camera_position.getY(), -quad_position.getY(), camera_smoothing),
+    //     lerp(old_camera_position.x(), -quad_position.x(), camera_smoothing),
+    //     lerp(old_camera_position.y(), -quad_position.y(), camera_smoothing),
     //     0.0,
     // );
     // camera.*.setPosition(new_camera_position);
@@ -157,5 +150,15 @@ pub fn render() anyerror!void {
 
 /// Defines the game-level gui rendering
 pub fn gui_render() anyerror!void {
-    Renderer.drawText("Eat Ass", 5.0, 5.0, 1.0, white);
+    //const user_message: []const u8 = "[Application-requested render] ";
+    //const ass_string: []const u8 = "Eat Ass, ";
+    //const skate_string: []const u8 = "Skate Fast";
+
+    //const user_width = getStringWidth(user_message, 1.0);
+    //const user_height = getStringHeight(user_message, 1.0);
+    //const ass_width = getStringWidth(ass_string, 1.0);
+
+    //Renderer.drawText(user_message, 5.0, 5.0, 1.0, white);
+    //Renderer.drawText(ass_string, 5.0, 5.0 + user_height, 1.0, white);
+    //Renderer.drawText(skate_string, 5.0 + ass_width, 5.0 + user_height, 1.0, white);
 }

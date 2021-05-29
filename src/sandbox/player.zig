@@ -19,7 +19,7 @@ pub const Player = struct {
 
     /// Allocates and builds a player
     /// Comments: The caller will be the owner of the memory
-    pub fn build(allocator: *std.mem.Allocator) !*Self {
+    pub fn new(allocator: *std.mem.Allocator) !*Self {
         var new_player = try allocator.create(Player);
         new_player.position = Vector3.new(0.0, 1.0, 0.0);
         new_player.sprite = try buildSprite(allocator, "player_idle", "assets/sprites/s_player.png");
@@ -27,9 +27,10 @@ pub const Player = struct {
     }
 
     /// Frees any allocated memory
-    pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
+    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
         self.sprite.?.free(allocator);
         allocator.destroy(self.sprite.?);
+        allocator.destroy(self);
     }
 
     /// Update logic
@@ -37,8 +38,8 @@ pub const Player = struct {
         const speed: f32 = 8.0 * delta;
         const movement_smoothing = 0.6;
         const player_direction = self.sprite.?.getFlipH();
-        const input_horizontal = Input.getKeyPressedValue(DrossKey.KeyD) - Input.getKeyPressedValue(DrossKey.KeyA);
-        const input_vertical = Input.getKeyPressedValue(DrossKey.KeyW) - Input.getKeyPressedValue(DrossKey.KeyS);
+        const input_horizontal = Input.keyPressedValue(DrossKey.KeyD) - Input.keyPressedValue(DrossKey.KeyA);
+        const input_vertical = Input.keyPressedValue(DrossKey.KeyW) - Input.keyPressedValue(DrossKey.KeyS);
 
         const target_position = self.position.add( //
             Vector3.new( //

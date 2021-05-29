@@ -12,50 +12,50 @@ const Vector2 = @import("vector2.zig").Vector2;
 /// Input wrapper for GLFW
 pub const Input = struct {
     /// Returns true if the key in question is currently pressed.
-    pub fn getKeyPressed(key: DrossKey) bool {
+    pub fn keyPressed(key: DrossKey) bool {
         var state = key_map.get(key).?;
         return state == DrossInputState.Pressed or state == DrossInputState.Down;
     }
 
     /// Returns the f32 value version of getKeyPressed
-    pub fn getKeyPressedValue(key: DrossKey) f32 {
-        const key_pressed = getKeyPressed(key);
+    pub fn keyPressedValue(key: DrossKey) f32 {
+        const key_pressed = keyPressed(key);
         return @intToFloat(f32, @boolToInt(key_pressed));
     }
 
     /// Returns true if the key in question was just released.
-    pub fn getKeyReleased(key: DrossKey) bool {
+    pub fn keyReleased(key: DrossKey) bool {
         return key_released_set.contains(key);
     }
 
     /// Returns the f32 value version of getKeyReleased
-    pub fn getKeyReleasedValue(key: DrossKey) f32 {
-        const key_released = getKeyReleased(key);
+    pub fn keyReleasedValue(key: DrossKey) f32 {
+        const key_released = keyReleased(key);
         return @intToFloat(f32, @boolToInt(key_released));
     }
 
     /// Returns true if the key in question is registered has held 
     /// down (takes a few frames to register).
-    pub fn getKeyDown(key: DrossKey) bool {
+    pub fn keyDown(key: DrossKey) bool {
         var state = key_map.get(key).?;
         return state == DrossInputState.Down;
     }
 
     /// Returns the f32 value version of getKeyDown
-    pub fn getKeyDownValue(key: DrossKey) f32 {
-        const key_down = getKeyDown(key);
+    pub fn keyDownValue(key: DrossKey) f32 {
+        const key_down = keyDown(key);
         return @intToFloat(f32, @boolToInt(key_down));
     }
 
     /// Returns the Mouse's position as a Vector2
     /// The position is in screen coordinates (relative to the left bounds)
     /// and top bounds of the content area.
-    pub fn getMousePosition() Vector2 {
+    pub fn mousePosition() Vector2 {
         return mouse_position;
     }
 
     /// Returns if the mouse button has been pressed this frame
-    pub fn getMouseButtonPressed(button: DrossMouseButton) bool {
+    pub fn mouseButtonPressed(button: DrossMouseButton) bool {
         const state = mouse_button_map.get(button).?;
         return state == DrossInputState.Pressed or state == DrossInputState.Down;
     }
@@ -64,23 +64,23 @@ pub const Input = struct {
     /// NOTE(devon): Currently does not work!
     /// TODO(devon): Create a timer to find out if the button has 
     /// be held down for multiple frames.
-    pub fn getMouseButtonDown(button: DrossMouseButton) bool {
+    pub fn mouseButtonDown(button: DrossMouseButton) bool {
         const state = mouse_button_map.get(button).?;
         return state == DrossInputState.Down;
     }
 
     /// Returns if the mouse button has been released this frame
-    pub fn getMouseButtonReleased(button: DrossMouseButton) bool {
+    pub fn mouseButtonReleased(button: DrossMouseButton) bool {
         return mouse_button_released_set.contains(button);
     }
 
     /// Allocates and builds the required components for the Input system.
     /// Comments: Any allocated memory will be owned by the Input System.
-    pub fn build(allocator: *std.mem.Allocator) !void {
+    pub fn new(allocator: *std.mem.Allocator) !void {
         // Connect the callbacks
-        _ = c.glfwSetKeyCallback(Application.getWindow(), keyCallback);
-        _ = c.glfwSetCursorPosCallback(Application.getWindow(), mousePositionCallback);
-        _ = c.glfwSetMouseButtonCallback(Application.getWindow(), mouseButtonCallback);
+        _ = c.glfwSetKeyCallback(Application.window(), keyCallback);
+        _ = c.glfwSetCursorPosCallback(Application.window(), mousePositionCallback);
+        _ = c.glfwSetMouseButtonCallback(Application.window(), mouseButtonCallback);
 
         // Initialize the mouse-related
         mouse_position = Vector2.new(0.0, 0.0);

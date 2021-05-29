@@ -4,7 +4,7 @@ const std = @import("std");
 const za = @import("zalgebra");
 
 // dross-zig
-const Color = @import("../../core/core.zig").Color;
+const Color = @import("../../core/color.zig").Color;
 const texture = @import("../texture.zig");
 const TextureId = texture.TextureId;
 const Sprite = @import("../sprite.zig").Sprite;
@@ -396,7 +396,7 @@ pub const OpenGlBackend = struct {
 
         // Setup framebuffers
         // const screen_buffer_size = Vector2.new(1280, 720);
-        const screen_buffer_size = Application.getViewportSize();
+        const screen_buffer_size = Application.viewportSize();
         self.screenbuffer = try framebuffa.buildFramebuffer(allocator);
         self.screenbuffer.?.bind(framebuffa.FramebufferType.Read);
         self.screenbuffer.?.addColorAttachment(
@@ -523,20 +523,20 @@ pub const OpenGlBackend = struct {
 
          // Tell OpenGL which shader program's pipeline we want to use
 
-        const camera_pos = camera.getPosition();
-        const camera_target = camera.getTargetPosition();
+        const camera_pos = camera.position();
+        const camera_target = camera.targetPosition();
         const camera_direction = camera_pos.subtract(camera_target).normalize();
         const camera_right = Vector3.up().cross(camera_direction).normalize();
         const camera_up = camera_direction.cross(camera_right);
-        const camera_zoom = camera.getZoom();
+        const camera_zoom = camera.zoom();
 
         // Set up projection matrix
         // const projection = Matrix4.identity().scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
         // const window_size = Application.getWindowSize();
-        const viewport_size = Application.getViewportSize();
-        const window_size = Application.getWindowSize();
-        // const aspect_ratio_w = window_size.getX() / window_size.getY();
-        // const aspect_ratio_h = window_size.getY() / window_size.getX();
+        const viewport_size = Application.viewportSize();
+        const window_size = Application.windowSize();
+        // const aspect_ratio_w = window_size.x() / window_size.y();
+        // const aspect_ratio_h = window_size.y() / window_size.x();
 
         // Works well enough
         // const projection = Matrix4.orthographic(
@@ -550,18 +550,18 @@ pub const OpenGlBackend = struct {
 
         const projection = Matrix4.orthographic(
             0, // Left
-            viewport_size.getX(), // Right
+            viewport_size.x(), // Right
             0, // top
-            viewport_size.getY(), // bottom
+            viewport_size.y(), // bottom
             -1.0, //Near
             1.0, // Far
         ); 
 
         const gui_projection = Matrix4.orthographic(
             0, // Left
-            window_size.getX(), // Right
+            window_size.x(), // Right
             0, // top
-            window_size.getY(), // bottom
+            window_size.y(), // bottom
             -1.0, //Near
             1.0, // Far
         ); 
@@ -602,8 +602,8 @@ pub const OpenGlBackend = struct {
         // Draw the quad
         c.glDrawArrays(c.GL_TRIANGLES, 0, 6);
 
-        FrameStatistics.quad();
-        FrameStatistics.drawCall();
+        FrameStatistics.incrementQuadCount();
+        FrameStatistics.incrementDrawCall();
     }
         
     /// Sets up renderer to be able to draw a untextured quad.
@@ -622,7 +622,7 @@ pub const OpenGlBackend = struct {
         
         self.drawIndexed(self.vertex_array.?);
 
-        FrameStatistics.quad();
+        FrameStatistics.incrementQuadCount();
     }
     
     /// Sets up renderer to be able to draw a untextured quad.
@@ -635,14 +635,14 @@ pub const OpenGlBackend = struct {
         transform = transform.scale(size);
 
         self.shader_program.?.setMatrix4("model", transform);
-        self.shader_program.?.setFloat3("text_color", color.r, color.g, color.b);
+        self.shader_program.?.setFloat3("sprite_color", color.r, color.g, color.b);
 
         // Bind the VAO
         self.vertex_array.?.bind();
         
         self.drawIndexed(self.vertex_array.?);
 
-        FrameStatistics.quad();
+        FrameStatistics.incrementQuadCount();
     }
     
     /// Sets up renderer to be able to draw a untextured quad.
@@ -650,7 +650,7 @@ pub const OpenGlBackend = struct {
         // Use Text Rendering shader program
         self.gui_renderer_program.?.use();
         
-        // Pass the text color
+        // Pass the quad color
         self.gui_renderer_program.?.setFloat4("draw_color", color.r, color.g, color.b, color.a);
 
         // Activate Texture Slot 0
@@ -662,10 +662,10 @@ pub const OpenGlBackend = struct {
          // Bind Texture
         c.glBindTexture(c.GL_TEXTURE_2D, self.debug_texture.?.getGlId());
 
-        const x = position.getX();
-        const y = position.getY();
-        const w = size.getX();
-        const h = size.getY();
+        const x = position.x();
+        const y = position.y();
+        const w = size.x();
+        const h = size.y();
 
         //zig fmt: off
         //const vertices: [24]f32 = [24]f32 {
@@ -702,8 +702,8 @@ pub const OpenGlBackend = struct {
         
         c.glDrawArrays(c.GL_TRIANGLES, 0, 6);
 
-        FrameStatistics.quad();
-        FrameStatistics.drawCall();
+        FrameStatistics.incrementQuadCount();
+        FrameStatistics.incrementDrawCall();
         
         // Clear the bound vao and texture
         GlVertexArray.clearBoundVertexArray();
@@ -727,7 +727,7 @@ pub const OpenGlBackend = struct {
         
         self.drawIndexed(self.vertex_array.?);
 
-        FrameStatistics.quad();
+        FrameStatistics.incrementQuadCount();
     }
 
     /// Sets up renderer to be able to draw a Sprite.
@@ -757,8 +757,8 @@ pub const OpenGlBackend = struct {
         var model = Matrix4.fromTranslate(position);
 
         // Rotation
-        const texture_coords_x = sprite_origin.getX() / sprite_size.getX();
-        const texture_coords_y = sprite_origin.getY() / sprite_size.getY();
+        const texture_coords_x = sprite_origin.x() / sprite_size.x();
+        const texture_coords_y = sprite_origin.y() / sprite_size.y();
         const model_to_origin = Vector3.new(
             texture_coords_x,
             texture_coords_y,
@@ -790,7 +790,7 @@ pub const OpenGlBackend = struct {
         
         self.drawIndexed(self.vertex_array.?);
 
-        FrameStatistics.quad();
+        FrameStatistics.incrementQuadCount();
     }
 
     /// Sets up the renderer to be able to draw text
@@ -817,17 +817,17 @@ pub const OpenGlBackend = struct {
         
         while(index < text_length) : (index += 1) {
             const character: u8 = text[index];
-            const glyph = app.default_font.?.getGlyph(character) catch |err| {
+            const current_glyph = app.default_font.?.glyph(character) catch |err| {
                 std.debug.print("[Renderer]: Error occurred when retrieving glyph {}! {s}\n", .{character, err});
                 @panic("[Renderer]: Failed to find glyph!");
             };
 
-            const offset = glyph.getOffset();
-            const glyph_width = @intToFloat(f32, glyph.getWidth());
-            const glyph_rows = @intToFloat(f32, glyph.getRows());
-            const x_pos = cursor_x + offset.getX() * scale;
-            const y_pos = y - (glyph_rows - offset.getY()) * scale;
-            const advance = glyph.getAdvance();
+            const offset = current_glyph.offset();
+            const glyph_width = @intToFloat(f32, current_glyph.width());
+            const glyph_rows = @intToFloat(f32, current_glyph.rows());
+            const x_pos = cursor_x + offset.x() * scale;
+            const y_pos = y - (glyph_rows - offset.y()) * scale;
+            const advance = current_glyph.advance();
             const width = glyph_width * scale;
             const height = glyph_rows * scale;
             
@@ -846,7 +846,7 @@ pub const OpenGlBackend = struct {
             const vertices_slice = vertices[0..];
 
             // Bind Texture
-            c.glBindTexture(c.GL_TEXTURE_2D, glyph.getTexture().?.getId().id_gl);
+            c.glBindTexture(c.GL_TEXTURE_2D, current_glyph.texture().?.getId().id_gl);
 
             // Update VBO
             self.font_renderer_vertex_buffer.?.bind();
@@ -860,8 +860,8 @@ pub const OpenGlBackend = struct {
             // Advance the cursor
             cursor_x += shifted;
 
-            FrameStatistics.quad();
-            FrameStatistics.drawCall();
+            FrameStatistics.incrementQuadCount();
+            FrameStatistics.incrementDrawCall();
         }
 
         // Clear the bound vao and texture
@@ -882,7 +882,7 @@ pub const OpenGlBackend = struct {
             offset, // Offset in a buffer or a pointer to the location where the indices are stored
         );
 
-        FrameStatistics.drawCall();
+        FrameStatistics.incrementDrawCall();
     }
 
     /// Changes to clear color

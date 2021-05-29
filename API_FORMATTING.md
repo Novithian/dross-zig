@@ -1,9 +1,12 @@
 ## Framework API Formatting
 - Ditch the builder pattern
-- .new(allocator) *Self, .free(allocator, self), .clean(self)
-	- **New**:  init/create/build a new instance of the structure.
+- .new(allocator) *Self, .free(allocator, self)	
+	- - **New**:  init/create/build a new instance of the structure.
 	- **Free**: allocator will destroy the instance after calling a clean method
-	- **Clean**: Any pre-deletion preperations
+		- This will be a struct function that will be passed a pointer to the instance. This will allow for cleaner game files if the allocator destory is handled by the free function itself. 1 call rather than two.
+		- Examples: 
+			- Player.free(allocator, player);
+			- VertexArray.free(allocator, vao);
 - Naming: 
 	- Local Variables:
 		- snake_case
@@ -32,28 +35,28 @@
 ## Refactor Progress:
 - [ ] main.zig 
 ### Sandbox
-- [ ] player.zig
+- [x] player.zig
 ### Utils
-- [ ] profiling/frame_statistics.zig
-- [ ] file_loader.zig
-- [ ] math_helpers.zig
-- [ ] timer.zig
-- [ ] strings.zig
+- [x] profiling/frame_statistics.zig
+- [x] file_loader.zig
+- [x] math_helpers.zig
+- [x] timer.zig
+- [x] strings.zig
 ### Core
-- [ ] application.zig
-- [ ] core.zig
-- [ ] input.zig
-- [ ] matrix4.zig
-- [ ] vector2.zig
-- [ ] vector3.zig
-- [ ] resource_handler.zig
+- [x] application.zig
+- [x] color.zig
+- [x] input.zig
+- [x] matrix4.zig
+- [x] vector2.zig
+- [x] vector3.zig
+- [x] resource_handler.zig
 ### Renderer
 - [ ] backend/backend_opengl.zig
 - [ ] backend/framebuffer_opengl.zig
 - [ ] backend/texture_opengl.zig
 - [ ] cameras/camera_2d.zig
-- [ ] font/font.zig
-- [ ] font/glyph.zig
+- [x] font/font.zig
+- [x] font/glyph.zig
 - [ ] framebuffer.zig
 - [ ] renderer.zig
 - [ ] sprite.zig

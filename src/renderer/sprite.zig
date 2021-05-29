@@ -1,7 +1,7 @@
 // Third Parties
 const std = @import("std");
 // dross-zig
-const Color = @import("../core/core.zig").Color;
+const Color = @import("../core/color.zig").Color;
 const Vector2 = @import("../core/vector2.zig").Vector2;
 const tx = @import("texture.zig");
 const Texture = tx.Texture;

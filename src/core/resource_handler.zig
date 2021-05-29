@@ -20,9 +20,10 @@ var font_map: std.StringHashMap(*Font) = undefined;
 
 pub const ResourceHandler = struct {
     /// Builds the ResourceHandler and allocates and required memory.
-    /// Comment: All resources allocated by the resource handler are owned
+    /// Comment: The ResourceHandler will be owned by the engine, and 
+    /// all resources allocated by the resource handler are owned
     /// by the ResourceHandler.
-    pub fn build(allocator: *std.mem.Allocator) void {
+    pub fn new(allocator: *std.mem.Allocator) void {
         resource_allocator = allocator;
 
         // Initialize the cache maps
@@ -32,7 +33,6 @@ pub const ResourceHandler = struct {
 
     /// Frees the ResourceHandler and deallocates and required memory.
     pub fn free() void {
-        //TODO(devon): loop through and free all textures
         var texture_iter = texture_map.iterator();
         var font_iter = font_map.iterator();
 
@@ -77,7 +77,7 @@ pub const ResourceHandler = struct {
     /// by the ResourceHandler. The returned font pointer is owned and 
     /// released by the ResourceHandler.
     pub fn loadFont(name: []const u8, path: [*c]const u8) ?*Font {
-        var font: *Font = fnt.buildFont(resource_allocator, path) catch |err| {
+        var font: *Font = Font.new(resource_allocator, path) catch |err| {
             std.debug.print("[Resource Handler]: Error occurred when loading font({s})! {}\n", .{ path, err });
             return null;
         };
@@ -97,18 +97,6 @@ pub const ResourceHandler = struct {
     pub fn unloadFont(name: []const u8) void {
         var font_entry = font_map.remove(name);
 
-        font_entry.?.value.free(resource_allocator);
-        resource_allocator.destroy(font_entry.?.value);
+        Font.free(resource_allocator, font_entry.?.value);
     }
 };
-
-/// Builds and allocates the ResourceHandler for the application.
-/// Comments: The allocated memory will be self-contained.
-pub fn buildResourceHandler(allocator: *std.mem.Allocator) !void {
-    ResourceHandler.build(allocator);
-}
-
-/// Frees the resource handler and any memory it has allocated.
-pub fn freeResourceHandler() void {
-    ResourceHandler.free();
-}

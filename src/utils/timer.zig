@@ -15,7 +15,7 @@ pub const Timer = struct {
 
     /// Allocates and builds a Timer
     /// Comments: The caller will own the memory
-    pub fn build(allocator: *std.mem.Allocator, label: []const u8) *Self {
+    pub fn new(allocator: *std.mem.Allocator, label: []const u8) *Self {
         var timer = allocator.create(Timer) catch |err| {
             std.debug.print("[Timer]: Error occurred when creating a timer! {s}\n", .{err});
             @panic("[Timer]: Error occurred creating a timer!\n");
@@ -27,15 +27,11 @@ pub const Timer = struct {
     }
 
     /// Frees up the timer
-    pub fn free(self: *Self) void {
+    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
         if (self.is_running) {
             _ = self.stop();
         }
-    }
 
-    /// Deinitialize
-    pub fn destroy(self: *Self, allocator: *std.mem.Allocator) void {
-        self.free();
         allocator.destroy(self);
     }
 

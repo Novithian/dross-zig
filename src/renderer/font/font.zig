@@ -17,13 +17,6 @@ const Glyph = gly.Glyph;
 
 ///
 pub const Font = struct {
-    /// The raw font file data
-    raw_data: ?[]const u8 = undefined,
-    /// Scaling of the Font
-    scale: Vector2 = undefined,
-    size: Vector2 = undefined,
-    offset: Vector2 = undefined,
-
     glyphs: std.AutoHashMap(u32, *Glyph),
 
     // FreeType
@@ -32,17 +25,11 @@ pub const Font = struct {
 
     const Self = @This();
 
-    ///
-    pub fn build(self: *Self, allocator: *std.mem.Allocator, path: [*c]const u8) !void {
-        //self.raw_data = fs.loadFile(path) catch |err| {
-        //    std.debug.print("[Font]: Error occurred while creating font {s}! {s}\n", .{ path, err });
-        //    @panic("[Font]: Error occurred while creating font!\n");
-        //};
-
-        // Set the default values
-        self.scale = Vector2.new(0.0, 0.0);
-        self.size = Vector2.new(0.0, 0.0);
-        self.offset = Vector2.new(0.0, 0.0);
+    /// Creates a new Font instance
+    /// Comments: The caller should only be going through the Resource Handler.
+    /// The Resource Handler will automatically handle de-allocating.
+    pub fn new(allocator: *std.mem.Allocator, path: [*c]const u8) !*Self {
+        var self = try allocator.create(Font);
 
         // Allocate the memory block for the Font Library
         self.library = allocator.create(c.FT_Library) catch |err| {
@@ -89,16 +76,18 @@ pub const Font = struct {
             const buffer_data = self.face.?.*.*.glyph.*.bitmap.buffer;
 
             // Generate Texture
-            var glyph = try Glyph.build(allocator, buffer_data, glyph_width, glyph_rows, glyph_offset_x, glyph_offset_y, glyph_x_advance);
+            var new_glyph = try Glyph.new(allocator, buffer_data, glyph_width, glyph_rows, glyph_offset_x, glyph_offset_y, glyph_x_advance);
             //// Add glyph to the list
-            try self.glyphs.put(character, glyph);
+            try self.glyphs.put(character, new_glyph);
         }
 
         Renderer.clearBoundTexture();
+
+        return self;
     }
 
-    ///
-    pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
+    /// Cleans up and de-allocates any memory in regards to the Font instance.
+    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
         _ = c.FT_Done_Face(self.face.?.*);
         _ = c.FT_Done_FreeType(self.library.?.*);
 
@@ -107,27 +96,19 @@ pub const Font = struct {
         while (glyph_iter.next()) |entry| {
             var glyph_entry = self.glyphs.remove(entry.key);
 
-            glyph_entry.?.value.free(allocator);
-            allocator.destroy(glyph_entry.?.value);
+            Glyph.free(allocator, glyph_entry.?.value);
         }
 
         self.glyphs.deinit();
 
         allocator.destroy(self.face.?);
         allocator.destroy(self.library.?);
+
+        allocator.destroy(self);
     }
 
     /// Returns a pointer to the glyph
-    pub fn getGlyph(self: *Self, glyph: u8) !*Glyph {
-        return self.glyphs.get(@intCast(c_ulong, glyph)).?;
+    pub fn glyph(self: *Self, character: u8) !*Glyph {
+        return self.glyphs.get(@intCast(c_ulong, character)).?;
     }
 };
-
-///
-pub fn buildFont(allocator: *std.mem.Allocator, path: [*c]const u8) !*Font {
-    var font = try allocator.create(Font);
-
-    try font.build(allocator, path);
-
-    return font;
-}

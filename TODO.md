@@ -4,16 +4,23 @@
 
 ## **TODO** ##
 
+### Bugs ###
+- 
+
 ### General ###
 - Wrapper for zalgebra vec4
 - Revise the engine APIs. Maybe move away from builder functions and opt for in-struct build function.
+	- Checklist:
+		- [ ] new
+		- [ ] free
+		- setters
+		- getters
+		- remove builder
 
 ### Renderer ###
 - Font Rendering
 	- Re-iterate to force an entire text render to a single draw call.
 	- Combined to only use a single texture bind
-	- Helper function to get text height
-	- Helper function to get text width
 - Pixel snap
 - Extract Vertex Arrays, Vertex Buffers, Shaders, and Shader Programs to their own files.
 
@@ -29,6 +36,7 @@
 
 ### Collision System ###
 - Basic AABB (axis-aligned bounding box) collision system
+- Is Mouse over 
 
 ### Audio ###
 - integrate libsoundio or fmod
@@ -37,6 +45,11 @@
 - Wrapper for window
 
 ## **LOG** ##
+- **[05-28-2021]**
+	- Helper function to get text width
+	- Helper function to get text height
+	- Started refactoring to the new API format
+	- Renamed core.zig to color.zig
 - **[05-27-2021]**
 	- Fixed font rendering scaling
 	- GUI Render event

@@ -9,7 +9,7 @@ const app = @import("../core/application.zig");
 const Application = app.Application;
 const TextureId = @import("texture.zig").TextureId;
 const Sprite = @import("sprite.zig").Sprite;
-const Color = @import("../core/core.zig").Color;
+const Color = @import("../core/color.zig").Color;
 const Camera = @import("../renderer/cameras/camera_2d.zig");
 const Matrix4 = @import("../core/matrix4.zig").Matrix4;
 const Vector3 = @import("../core/vector3.zig").Vector3;
@@ -122,25 +122,25 @@ pub const Renderer = struct {
         // Profiling stats
         if (!app.debug_mode) return;
 
-        const window_size = Application.getWindowSize();
+        const window_size = Application.windowSize();
         const string_height = 30.0;
         const top_padding = 0.0;
         const left_padding = 20.0;
-        const window_size_y = window_size.getY();
-        const background_size = Vector3.new(window_size.getX() * 0.25, 100 + top_padding + (string_height * 5.0), 0.0);
+        const window_size_y = window_size.y();
+        const background_size = Vector3.new(window_size.x() * 0.25, 100 + top_padding + (string_height * 5.0), 0.0);
         var background_color = Color.darkGray();
         const background_opacity = 0.5;
         background_color.a = background_opacity;
 
         // Draw background window
-        Renderer.drawColoredQuadGui(Vector3.new(0.0, window_size_y - background_size.getY(), 0.0), background_size, background_color);
+        Renderer.drawColoredQuadGui(Vector3.new(0.0, window_size_y - background_size.y(), 0.0), background_size, background_color);
 
         // Populate Stats
-        const frame_time: f64 = FrameStatistics.getFrameTime();
-        const update_time: f64 = FrameStatistics.getUpdateTime();
-        const draw_time: f64 = FrameStatistics.getDrawTime();
-        var draw_calls: i64 = FrameStatistics.getDrawCalls();
-        var quad_count: i64 = FrameStatistics.getQuadCount();
+        const frame_time: f64 = FrameStatistics.frameTime();
+        const update_time: f64 = FrameStatistics.updateTime();
+        const draw_time: f64 = FrameStatistics.drawTime();
+        var draw_calls: i64 = FrameStatistics.drawCalls();
+        var quad_count: i64 = FrameStatistics.quadCount();
 
         var frame_time_buffer: [128]u8 = undefined;
         var update_time_buffer: [128]u8 = undefined;

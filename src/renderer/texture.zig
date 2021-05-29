@@ -3,7 +3,7 @@ const c = @import("../c_global.zig").c_imp;
 const std = @import("std");
 // dross-zig
 const gl = @import("backend/texture_opengl.zig");
-const Color = @import("../core/core.zig").Color;
+const Color = @import("../core/color.zig").Color;
 const renderer = @import("renderer.zig");
 const selected_api = @import("renderer.zig").api;
 const Vector2 = @import("../core/vector2.zig").Vector2;

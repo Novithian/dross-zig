@@ -13,88 +13,93 @@ const Texture = tx.Texture;
 
 ///
 pub const Glyph = struct {
-    texture: ?*Texture = 0,
+    internal_texture: ?*Texture = 0,
     texture_coordinates: Vector2 = undefined,
-    width: u32 = undefined,
-    rows: u32 = undefined,
-    offset_x: i32 = undefined,
-    offset_y: i32 = undefined,
-    x_advance: u32 = undefined,
+    internal_width: u32 = undefined,
+    internal_rows: u32 = undefined,
+    internal_offset_x: i32 = undefined,
+    internal_offset_y: i32 = undefined,
+    internal_advance: u32 = undefined,
 
     const Self = @This();
 
-    ///
-    pub fn build(
-        allocator: *std.mem.Allocator, //
+    /// Allocates and builds a Glyph instance
+    /// Comments: The Font instance should be the 
+    /// only player this is called, so the owner 
+    /// SHOULD be a Font instance.
+    pub fn new(
+        allocator: *std.mem.Allocator,
         data: [*c]u8,
-        width: u32,
-        rows: u32,
-        offset_x: i32,
-        offset_y: i32,
-        x_advance: u32,
+        desired_width: u32,
+        desired_rows: u32,
+        desired_offset_x: i32,
+        desired_offset_y: i32,
+        desired_advance: u32,
     ) !*Self {
         var glyph = try allocator.create(Glyph);
-        glyph.texture = try tx.buildFontTexture(allocator, data, width, rows);
-        glyph.width = width;
-        glyph.rows = rows;
-        glyph.offset_x = offset_x;
-        glyph.offset_y = offset_y;
-        glyph.x_advance = x_advance;
+        glyph.internal_texture = try tx.buildFontTexture(allocator, data, desired_width, desired_rows);
+        glyph.internal_width = desired_width;
+        glyph.internal_rows = desired_rows;
+        glyph.internal_offset_x = desired_offset_x;
+        glyph.internal_offset_y = desired_offset_y;
+        glyph.internal_advance = desired_advance;
         return glyph;
     }
 
-    /// 
-    pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
-        self.texture.?.free(allocator);
-        allocator.destroy(self.texture.?);
+    /// Cleans up and de-allocates the Glyph and 
+    /// any memory it allocated.
+    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+        self.internal_texture.?.free(allocator);
+        allocator.destroy(self.internal_texture.?);
+        allocator.destroy(self);
     }
 
     /// Sets the stored size of the glyph
     pub fn setWidth(self: *Self, width: u32) void {
-        self.width = width;
+        self.internal_width = width;
     }
 
     /// Sets the stored size of the glyph
     pub fn setRows(self: *Self, rows: u32) void {
-        self.rows = rows;
+        self.internal_rows = rows;
     }
 
     /// Sets the stored offset of the glyph
     pub fn setOffset(self: *Self, offset_x: i32, offset_y: i32) void {
-        self.offset_x = offset_x;
-        self.offset_y = offset_y;
+        self.internal_offset_x = offset_x;
+        self.internal_offset_y = offset_y;
     }
 
     /// Sets the stored x_advance of the glyph
     pub fn setAdvance(self: *Self, x_advance: u32) void {
-        self.x_advance = x_advance;
+        self.internal_advance = x_advance;
     }
 
     /// Returns the stored width of the glyph
-    pub fn getWidth(self: *Self) u32 {
-        return self.width;
+    pub fn width(self: *Self) u32 {
+        return self.internal_width;
     }
 
     /// Returns the stored number of rows of the glyph
-    pub fn getRows(self: *Self) u32 {
-        return self.rows;
+    pub fn rows(self: *Self) u32 {
+        return self.internal_rows;
     }
 
     /// Returns the stored offset of the glyph
-    pub fn getOffset(self: *Self) Vector2 {
+    pub fn offset(self: *Self) Vector2 {
         return Vector2.new(
-            @intToFloat(f32, self.offset_x),
-            @intToFloat(f32, self.offset_y),
+            @intToFloat(f32, self.internal_offset_x),
+            @intToFloat(f32, self.internal_offset_y),
         );
     }
 
     /// Returns the stored x_advance of the glyph
-    pub fn getAdvance(self: *Self) u32 {
-        return self.x_advance;
+    pub fn advance(self: *Self) u32 {
+        return self.internal_advance;
     }
 
     /// Returns a pointer to the glyph's texture
-    pub fn getTexture(self: *Self) ?*Texture {
-        return self.texture;
+    pub fn texture(self: *Self) ?*Texture {
+        return self.internal_texture;
     }
 };

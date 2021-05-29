@@ -22,12 +22,12 @@ pub const Vector2 = struct {
     }
 
     /// Returns the value of the x component
-    pub fn getX(self: Self) f32 {
+    pub fn x(self: Self) f32 {
         return self.data.x;
     }
 
     /// Returns the value of the y component
-    pub fn getY(self: Self) f32 {
+    pub fn y(self: Self) f32 {
         return self.data.y;
     }
 
@@ -66,7 +66,7 @@ pub const Vector2 = struct {
     }
 
     /// Returns the angle (in degrees) between two vectors.
-    pub fn getAngle(lhs: Self, rhs: Self) f32 {
+    pub fn angle(lhs: Self, rhs: Self) f32 {
         return lhs.data.get_angle(rhs.data);
     }
 

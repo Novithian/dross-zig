@@ -116,8 +116,8 @@ pub const OpenGlTexture = struct {
         c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MIN_FILTER, c.GL_NEAREST);
         c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MAG_FILTER, c.GL_NEAREST);
 
-        self.width = @floatToInt(c_int, size.getX());
-        self.height = @floatToInt(c_int, size.getY());
+        self.width = @floatToInt(c_int, size.x());
+        self.height = @floatToInt(c_int, size.y());
 
         // Generate gl texture
         c.glTexImage2D(

@@ -26,8 +26,9 @@ pub const FrameStatistics = struct {
 
     const Self = @This();
 
-    ///
-    pub fn build(allocator: *std.mem.Allocator) !void {
+    /// Creates a new instance of FrameStatistics.
+    /// Comments: The memory allocated will be engine-owned.
+    pub fn new(allocator: *std.mem.Allocator) !void {
         stats = try allocator.create(FrameStatistics);
 
         stats.?.frame_time = -1.0;
@@ -35,11 +36,8 @@ pub const FrameStatistics = struct {
         stats.?.update_time = -1.0;
     }
 
-    ///
-    pub fn free(self: *Self) void {}
-
-    /// 
-    pub fn destroy(allocator: *std.mem.Allocator) void {
+    /// Cleans up and de-allocates if a FrameStatistics instance exists.
+    pub fn free(allocator: *std.mem.Allocator) void {
         allocator.destroy(stats.?);
     }
 
@@ -49,7 +47,7 @@ pub const FrameStatistics = struct {
     }
 
     /// Returns the currently stored frame time
-    pub fn getFrameTime() f64 {
+    pub fn frameTime() f64 {
         return stats.?.frame_time;
     }
 
@@ -59,7 +57,7 @@ pub const FrameStatistics = struct {
     }
 
     /// Returns the currently stored draw time
-    pub fn getDrawTime() f64 {
+    pub fn drawTime() f64 {
         return stats.?.draw_time;
     }
 
@@ -69,40 +67,45 @@ pub const FrameStatistics = struct {
     }
 
     /// Returns the currently stored update time
-    pub fn getUpdateTime() f64 {
+    pub fn updateTime() f64 {
         return stats.?.update_time;
     }
 
     /// Returns the total numbert of draw calls recorded for the frame
-    pub fn getDrawCalls() i64 {
+    pub fn drawCalls() i64 {
         return stats.?.draw_calls;
     }
 
     /// Returns the total of quads being renderered
-    pub fn getQuadCount() i64 {
+    pub fn quadCount() i64 {
         return stats.?.quad_count;
     }
 
     /// Returns the total vertex count being drawn 
-    pub fn getVertexCount() i64 {
+    pub fn vertexCount() i64 {
         return stats.?.quad_count * 4;
     }
 
     /// Returns the total index count being drawn 
-    pub fn getIndexCount() i64 {
+    pub fn indexCount() i64 {
         return stats.?.quad_count * 6;
     }
 
+    /// Resets the frame statistics: 
+    /// `quad_count`
+    /// `draw_calls`
     pub fn reset() void {
         stats.?.quad_count = 0;
         stats.?.draw_calls = 0;
     }
 
-    pub fn quad() void {
+    /// Increments the quad count.
+    pub fn incrementQuadCount() void {
         stats.?.quad_count += 1;
     }
 
-    pub fn drawCall() void {
+    /// Increments the draw call count.
+    pub fn incrementDrawCall() void {
         stats.?.draw_calls += 1;
     }
 

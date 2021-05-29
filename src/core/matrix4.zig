@@ -68,7 +68,7 @@ pub const Matrix4 = struct {
     }
 
     /// Returns the translation vector from the transform matrix
-    pub fn getTranslation(self: Self) Vector3 {
+    pub fn translation(self: Self) Vector3 {
         return Vector3{
             .data = self.data.extract_translation(),
         };
@@ -103,7 +103,7 @@ pub const Matrix4 = struct {
     }
 
     /// Returns the rotation from the matrix as Euler angles (in degrees).
-    pub fn getRotation(self: Self) Vector3 {
+    pub fn rotation(self: Self) Vector3 {
         return Vector3{
             .data = self.data.extract_rotation(),
         };
@@ -124,7 +124,7 @@ pub const Matrix4 = struct {
     }
 
     /// Returns the scale from the transform matrix as a Vector3.
-    pub fn getScale(self: Self) Vector3 {
+    pub fn scaling(self: Self) Vector3 {
         return Vector3{
             .data = self.data.extract_scale(),
         };

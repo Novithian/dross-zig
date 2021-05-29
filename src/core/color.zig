@@ -40,19 +40,12 @@ pub const Color = struct {
         return new_color;
     }
 
+    /// Returns a Vector3 filled with the Color's r, g, and b values respectively. 
     pub fn toVector3(self: Self) Vector3 {
         return Vector3.new(self.r, self.g, self.b);
     }
 
-    pub fn red() Self {
-        return .{
-            .r = 1.0,
-            .g = 0.0,
-            .b = 0.0,
-            .a = 1.0,
-        };
-    }
-
+    /// Returns a Color struct with the values (1.0, 1.0, 1.0, 1.0).
     pub fn white() Self {
         return .{
             .r = 1.0,
@@ -62,6 +55,47 @@ pub const Color = struct {
         };
     }
 
+    /// Returns a Color struct with the values (0.0, 0.0, 0.0, 1.0).
+    pub fn black() Self {
+        return .{
+            .r = 0.0,
+            .g = 0.0,
+            .b = 0.0,
+            .a = 1.0,
+        };
+    }
+
+    /// Returns a Color struct with the values (1.0, 0.0, 0.0, 1.0).
+    pub fn red() Self {
+        return .{
+            .r = 1.0,
+            .g = 0.0,
+            .b = 0.0,
+            .a = 1.0,
+        };
+    }
+
+    /// Returns a Color struct with the values (0.0, 0.0, 1.0, 1.0).
+    pub fn blue() Self {
+        return .{
+            .r = 0.0,
+            .g = 0.0,
+            .b = 1.0,
+            .a = 1.0,
+        };
+    }
+
+    /// Returns a Color struct with the values (0.0, 1.0, 0.0, 1.0).
+    pub fn green() Self {
+        return .{
+            .r = 0.0,
+            .g = 1.0,
+            .b = 0.0,
+            .a = 1.0,
+        };
+    }
+
+    /// Returns a Color struct with the values (0.28, 0.28, 0.28, 1.0).
     pub fn gray() Self {
         return .{
             .r = 0.28,
@@ -71,6 +105,7 @@ pub const Color = struct {
         };
     }
 
+    /// Returns a Color struct with the values (0.12, 0.12, 0.12, 1.0).
     pub fn darkGray() Self {
         return .{
             .r = 0.12,

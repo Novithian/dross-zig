@@ -24,24 +24,24 @@ pub const Vector3 = struct {
     }
 
     /// Create a Vector3 from a given Vector2 and a z value
-    pub fn fromVector2(xy: Vector2, z: f32) Self {
+    pub fn fromVector2(xy: Vector2, desired_z: f32) Self {
         return Self{
-            .data = Vec3.new(xy.getX(), xy.getY(), z),
+            .data = Vec3.new(xy.x(), xy.y(), desired_z),
         };
     }
 
     /// Returns the value of the x component
-    pub fn getX(self: Self) f32 {
+    pub fn x(self: Self) f32 {
         return self.data.x;
     }
 
     /// Returns the value of the y component
-    pub fn getY(self: Self) f32 {
+    pub fn y(self: Self) f32 {
         return self.data.y;
     }
 
     /// Returns the value of the z component
-    pub fn getZ(self: Self) f32 {
+    pub fn z(self: Self) f32 {
         return self.data.z;
     }
 
