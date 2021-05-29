@@ -2,7 +2,7 @@
 const c = @import("../c_global.zig").c_imp;
 const std = @import("std");
 // dross-zig
-const gl = @import("backend/texture_opengl.zig");
+const TextureGl = @import("backend/texture_opengl.zig").TextureGl;
 const Color = @import("../core/color.zig").Color;
 const renderer = @import("renderer.zig");
 const selected_api = @import("renderer.zig").api;
@@ -24,76 +24,98 @@ pub const TextureId = union {
 pub const Texture = struct {
     /// The internal texture 
     /// Comments: INTERNAL use only!
-    gl_texture: ?*gl.OpenGlTexture,
+    gl_texture: ?*TextureGl,
     /// The unique name of the texture
-    name: []const u8 = undefined,
+    internal_name: []const u8 = undefined,
     /// The ID for the texture,
-    id: TextureId,
+    internal_id: TextureId,
 
     const Self = @This();
 
-    /// Sets up the Texture and allocates and required memory
-    fn build(self: *Self, allocator: *std.mem.Allocator, name: []const u8, path: []const u8) !void {
+    /// Allocates and sets up a Texture
+    /// Comments: The caller will own the allocated data, but
+    /// this should be done through the Resource Handler. via
+    /// loadTexture()
+    pub fn new(allocator: *std.mem.Allocator, name: []const u8, path: []const u8) !*Self {
+        var self = try allocator.create(Texture);
+
         switch (selected_api) {
             renderer.BackendApi.OpenGl => {
-                self.gl_texture = gl.buildOpenGlTexture(allocator, path) catch |err| {
+                self.gl_texture = TextureGl.new(allocator, path) catch |err| {
                     std.debug.print("{}\n", .{err});
                     @panic("[Texture]: ERROR when creating a texture!");
                 };
-                self.id = .{
-                    .id_gl = self.gl_texture.?.getId(),
+                self.internal_id = .{
+                    .id_gl = self.gl_texture.?.id(),
                 };
-                self.name = name;
+                self.internal_name = name;
             },
             renderer.BackendApi.Dx12 => {},
             renderer.BackendApi.Vulkan => {},
         }
+
+        return self;
     }
 
-    /// Sets up a dataless Texture and allocates any required memory
-    fn buildDataless(self: *Self, allocator: *std.mem.Allocator, size: Vector2) !void {
+    /// Allocates and sets up a dataless Texture
+    /// Comments: The caller will own the allocated data.
+    pub fn newDataless(allocator: *std.mem.Allocator, desired_size: Vector2) !*Self {
+        var self = try allocator.create(Texture);
+
         switch (selected_api) {
             renderer.BackendApi.OpenGl => {
-                self.gl_texture = gl.buildDatalessOpenGlTexture(allocator, size) catch |err| {
+                self.gl_texture = TextureGl.newDataless(allocator, desired_size) catch |err| {
                     std.debug.print("[Texture]: {}\n", .{err});
                     @panic("[Texture]: ERROR occurred when creating a dataless texture!");
                 };
-                self.id = .{
-                    .id_gl = self.gl_texture.?.getId(),
+                self.internal_id = .{
+                    .id_gl = self.gl_texture.?.id(),
                 };
             },
             renderer.BackendApi.Dx12 => {},
             renderer.BackendApi.Vulkan => {},
         }
+
+        return self;
     }
 
-    /// Setups a font Texture and allocates any required memory
-    fn buildFont(self: *Self, allocator: *std.mem.Allocator, data: [*c]u8, width: u32, rows: u32) !void {
+    /// Allocates and sets up a Texture for font-rendering
+    /// Comments: The caller will own the allocated data, but
+    /// this should be done through the Resource Handler via
+    /// loadFont().
+    pub fn newFont(allocator: *std.mem.Allocator, data: [*c]u8, width: u32, rows: u32) !*Self {
+        var self = try allocator.create(Texture);
+
         switch (selected_api) {
             renderer.BackendApi.OpenGl => {
-                self.gl_texture = gl.buildFontOpenGlTexture(allocator, data, width, rows) catch |err| {
+                self.gl_texture = TextureGl.newFont(allocator, data, width, rows) catch |err| {
                     std.debug.print("[Texture]: {}\n", .{err});
                     @panic("[Texture]: ERROR occurred when creating a font texture!");
                 };
-                self.id = .{
-                    .id_gl = self.gl_texture.?.getId(),
+                self.internal_id = .{
+                    .id_gl = self.gl_texture.?.id(),
                 };
             },
             renderer.BackendApi.Dx12 => {},
             renderer.BackendApi.Vulkan => {},
         }
+
+        return self;
     }
 
-    /// Deallocates any owned memory that was required for operation
-    pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
+    /// Cleans up and de-allocates the Texture 
+    /// Comments: Should only be called by the Resource Handler
+    /// via unloadTexture()/unloadFont()
+    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
         switch (selected_api) {
             renderer.BackendApi.OpenGl => {
-                self.gl_texture.?.free(allocator);
-                allocator.destroy(self.gl_texture.?);
+                TextureGl.free(allocator, self.gl_texture.?);
             },
             renderer.BackendApi.Dx12 => {},
             renderer.BackendApi.Vulkan => {},
         }
+
+        allocator.destroy(self);
     }
 
     /// Binds the texture
@@ -108,21 +130,21 @@ pub const Texture = struct {
     }
 
     /// Returns the Texture ID
-    pub fn getId(self: *Self) TextureId {
-        return self.id;
+    pub fn id(self: *Self) TextureId {
+        return self.internal_id;
     }
 
     /// Returns the OpenGL generated texture ID
-    pub fn getGlId(self: *Self) c_uint {
-        return self.gl_texture.?.getId();
+    pub fn idGl(self: *Self) c_uint {
+        return self.gl_texture.?.id();
     }
 
     /// Returns the size of the Texture
-    pub fn getSize(self: *Self) ?Vector2 {
+    pub fn size(self: *Self) ?Vector2 {
         switch (selected_api) {
             renderer.BackendApi.OpenGl => {
-                const width: f32 = @intToFloat(f32, self.gl_texture.?.width);
-                const height: f32 = @intToFloat(f32, self.gl_texture.?.height);
+                const width: f32 = @intToFloat(f32, self.gl_texture.?.width());
+                const height: f32 = @intToFloat(f32, self.gl_texture.?.height());
                 return Vector2.new(width, height);
             },
             renderer.BackendApi.Dx12 => {
@@ -134,36 +156,3 @@ pub const Texture = struct {
         }
     }
 };
-
-/// Allocates and builds a texture object depending on the target_api
-/// Comments: The caller owns the Texture
-/// INTERNAL USE ONLY.
-pub fn buildTexture(allocator: *std.mem.Allocator, name: []const u8, path: []const u8) anyerror!*Texture {
-    var texture: *Texture = try allocator.create(Texture);
-
-    try texture.build(allocator, name, path);
-
-    return texture;
-}
-
-/// Allocates and builds a dataless texture object depending on the target_api
-/// Comments: The caller owns the Texture
-/// INTERNAL USE ONLY.
-pub fn buildDatalessTexture(allocator: *std.mem.Allocator, size: Vector2) anyerror!*Texture {
-    var texture: *Texture = try allocator.create(Texture);
-
-    try texture.buildDataless(allocator, size);
-
-    return texture;
-}
-
-/// Allocates and builds a dataless texture object depending on the target_api
-/// Comments: The caller owns the Texture
-/// INTERNAL USE ONLY.
-pub fn buildFontTexture(allocator: *std.mem.Allocator, data: [*c]u8, width: u32, rows: u32) anyerror!*Texture {
-    var texture: *Texture = try allocator.create(Texture);
-
-    try texture.buildFont(allocator, data, width, rows);
-
-    return texture;
-}

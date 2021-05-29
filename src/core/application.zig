@@ -4,7 +4,7 @@ const std = @import("std");
 // dross-rs
 //const Timer = @import("../utils/timer.zig").Timer;
 const ResourceHandler = @import("resource_handler.zig").ResourceHandler;
-const gfx = @import("../renderer/renderer.zig");
+const Renderer = @import("../renderer/renderer.zig").Renderer;
 const font = @import("../renderer/font/font.zig");
 const Font = font.Font;
 const cam = @import("../renderer/cameras/camera_2d.zig");
@@ -92,12 +92,12 @@ pub const Application = struct {
         ResourceHandler.new(allocator);
 
         // Build the Renderer
-        try gfx.buildRenderer(allocator);
+        try Renderer.new(allocator);
 
         // Remember to set the app's allocator to the passed allocator
         self.allocator = allocator;
 
-        _ = c.glfwSetFramebufferSizeCallback(app_window, gfx.Renderer.resizeInternal);
+        _ = c.glfwSetFramebufferSizeCallback(app_window, Renderer.resizeInternal);
 
         // Resize the application's viewport to match that of the window
         // self.resize(0, 0, width, height);
@@ -124,8 +124,7 @@ pub const Application = struct {
         // Manually allocated memory cleanup
         FrameStatistics.free(self.allocator.?);
         Input.free(self.allocator.?);
-        cam.freeAllCamera2d(self.allocator.?);
-        try gfx.freeRenderer(self.allocator.?);
+        Renderer.free(self.allocator.?);
         ResourceHandler.free();
 
         allocator.destroy(self);
@@ -138,6 +137,13 @@ pub const Application = struct {
         render_loop: fn () anyerror!void,
         gui_render_loop: fn () anyerror!void,
     ) void {
+
+        // Pre-run checks
+        if (cam.count() <= 0) {
+            std.debug.print("[Application]: No camera could be found in the scene!\n", .{});
+            @panic("[Application]: Error occurred before starting the application loop!\n");
+        }
+
         while (c.glfwWindowShouldClose(app_window) == 0) {
             // Profiling
             var frame_timer = std.time.Timer.start() catch |err| {
@@ -180,7 +186,7 @@ pub const Application = struct {
                     @panic("[Application]: Error occurred creating a timer!\n");
                 };
 
-                gfx.Renderer.render(render_loop, gui_render_loop);
+                Renderer.render(render_loop, gui_render_loop);
 
                 draw_duration = @intToFloat(f64, draw_timer.read()) / @intToFloat(f64, std.time.ns_per_ms);
             }
@@ -202,7 +208,7 @@ pub const Application = struct {
     /// Process the application input
     pub fn processInput(self: *Self, delta: f64) void {
         // TODO(devon): Remove when shipping
-        var camera: *cam.Camera2d = cam.getCurrentCamera().?;
+        var camera = cam.currentCamera().?;
 
         if (Input.keyPressed(DrossKey.KeyEscape)) c.glfwSetWindowShouldClose(app_window, c.GL_TRUE);
 
@@ -230,11 +236,11 @@ pub const Application = struct {
         }
 
         if (debug_mode) {
-            var camera_pos = camera.getPosition();
-            const camera_zoom = camera.getZoom();
+            var camera_pos = camera.position();
+            const camera_zoom = camera.zoom();
             var delta_pos = Vector3.zero();
             const delta32: f32 = @floatCast(f32, delta);
-            const camera_speed = camera.getSpeed() * delta32;
+            const camera_speed = camera.speed() * delta32;
 
             // Zoom in
             if (Input.keyPressed(DrossKey.KeyU)) {
@@ -285,7 +291,7 @@ pub const Application = struct {
     /// Resize the application
     pub fn resize(self: *Self, x: c_int, y: c_int, width: c_int, height: c_int) void {
         // Call renderer's resize method
-        gfx.Renderer.resizeViewport(x, y, width, height);
+        Renderer.resizeViewport(x, y, width, height);
         setWindowSize(@intToFloat(f32, width), @intToFloat(f32, height));
     }
 

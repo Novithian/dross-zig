@@ -51,14 +51,19 @@
 - [x] vector3.zig
 - [x] resource_handler.zig
 ### Renderer
-- [ ] backend/backend_opengl.zig
-- [ ] backend/framebuffer_opengl.zig
-- [ ] backend/texture_opengl.zig
-- [ ] cameras/camera_2d.zig
+- [x] backend/renderer_opengl.zig
+- [x] backend/framebuffer_opengl.zig
+- [x] backend/texture_opengl.zig
+- [x] backend/vertex_buffer_opengl.zig
+- [x] backend/vertex_array_opengl.zig
+- [x] backend/index_buffer_opengl.zig
+- [x] backend/shader_opengl.zig
+- [x] backend/shader_program_opengl.zig
+- [x] cameras/camera_2d.zig
 - [x] font/font.zig
 - [x] font/glyph.zig
-- [ ] framebuffer.zig
-- [ ] renderer.zig
-- [ ] sprite.zig
-- [ ] texture.zig
+- [x] framebuffer.zig
+- [x] renderer.zig
+- [x] sprite.zig
+- [x] texture.zig
 

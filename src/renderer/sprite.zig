@@ -4,6 +4,7 @@ const std = @import("std");
 const Color = @import("../core/color.zig").Color;
 const Vector2 = @import("../core/vector2.zig").Vector2;
 const tx = @import("texture.zig");
+const TextureId = tx.TextureId;
 const Texture = tx.Texture;
 const rh = @import("../core/resource_handler.zig");
 
@@ -11,95 +12,102 @@ const rh = @import("../core/resource_handler.zig");
 //      - Sprite -
 // -----------------------------------------
 pub const Sprite = struct {
-    texture: ?*Texture = undefined,
-    color: Color = undefined,
+    internal_texture: ?*Texture = undefined,
+    internal_color: Color = undefined,
     /// The point of rotation on the sprite in pixels.
-    origin: Vector2 = undefined,
-    scale: Vector2 = undefined,
-    angle: f32 = 0.0,
+    internal_origin: Vector2 = undefined,
+    internal_scale: Vector2 = undefined,
+    internal_angle: f32 = 0.0,
     flip_h: bool = false,
 
     const Self = @This();
 
-    /// Builds the Sprite and allocates the required memory
-    pub fn build(self: *Self, texture_name: []const u8, texture_path: []const u8) !void {
-        const texture_op = try rh.ResourceHandler.loadTexture(texture_name, texture_path);
-        self.texture = texture_op orelse return tx.TextureErrors.FailedToLoad;
+    /// Allocates and builds a Sprite
+    /// Comments: The allocated Sprite will be owned by the caller, but the 
+    /// allocated Texture is owned by the Resource Handler.
+    pub fn new(allocator: *std.mem.Allocator, texture_name: []const u8, texture_path: []const u8) !*Self {
+        var self = try allocator.create(Sprite);
 
-        const texture_size = self.texture.?.getSize();
-        self.color = Color.rgba(1.0, 1.0, 1.0, 1.0);
+        const texture_op = try rh.ResourceHandler.loadTexture(texture_name, texture_path);
+        self.internal_texture = texture_op orelse return tx.TextureErrors.FailedToLoad;
+
+        const texture_size = self.internal_texture.?.size();
+        self.internal_color = Color.rgba(1.0, 1.0, 1.0, 1.0);
         // self.origin = texture_size.?.scale(0.5);
-        self.origin = Vector2.zero();
-        self.scale = Vector2.new(1.0, 1.0);
-        self.angle = 0.0;
+        self.internal_origin = Vector2.zero();
+        self.internal_scale = Vector2.new(1.0, 1.0);
+        self.internal_angle = 0.0;
         self.flip_h = false;
+
+        return self;
     }
 
-    /// Frees the Sprite
-    pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
+    /// Cleans up and de-allocates the Sprite
+    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
         // Sprite is not the owner of texture, but has a reference to it is all.
         // Resource Handler is what owns all textures and will dispose of it.
         // It wouldn't make sense to unload a texture just because a single
         // Sprite instance was destroyed, unless that is the only reference of
         // the texture.
+        allocator.destroy(self);
     }
 
     /// Returns the TextureId of the stored texture
-    pub fn getTextureId(self: *Self) ?tx.TextureId {
-        if (self.texture == undefined) return null;
-        return self.texture.?.getId();
+    pub fn textureId(self: *Self) ?TextureId {
+        if (self.internal_texture == undefined) return null;
+        return self.internal_texture.?.id();
     }
 
     /// Sets the Sprites texture
     pub fn setTexture(self: *Self, new_texture: *Texture) void {
-        self.texture = new_texture;
+        self.internal_texture = new_texture;
     }
 
     /// Sets the Sprite color modulation
     pub fn setColor(self: *Self, new_color: Color) void {
-        self.color = new_color;
+        self.internal_color = new_color;
     }
 
     /// Returns the Sprite current color modulation
-    pub fn getColor(self: *Self) Color {
-        return self.color;
+    pub fn color(self: *Self) Color {
+        return self.internal_color;
     }
 
     /// Sets the Sprite scale
     pub fn setScale(self: *Self, new_scale: Vector2) void {
-        self.scale = new_scale;
+        self.internal_scale = new_scale;
     }
 
     /// Returns the Sprite's current scale as a Vector2
-    pub fn getScale(self: *Self) Vector2 {
-        return self.scale;
+    pub fn scale(self: *Self) Vector2 {
+        return self.internal_scale;
     }
 
     /// Returns the size of the Sprite's active texture
-    pub fn getSize(self: *Self) ?Vector2 {
-        if (self.texture == undefined) return null;
-        return self.texture.?.getSize();
+    pub fn size(self: *Self) ?Vector2 {
+        if (self.internal_texture == undefined) return null;
+        return self.internal_texture.?.size();
     }
 
     /// Returns the Sprite's origin
-    pub fn getOrigin(self: *Self) Vector2 {
-        return self.origin;
+    pub fn origin(self: *Self) Vector2 {
+        return self.internal_origin;
     }
 
     /// Sets the Sprite's origin
     /// Origin is in pixels, not percentage.
     pub fn setOrigin(self: *Self, new_origin: Vector2) void {
-        self.origin = new_origin;
+        self.internal_origin = new_origin;
     }
 
     /// Returns the Sprite's angle of rotation (in degrees)
-    pub fn getAngle(self: *Self) f32 {
-        return self.angle;
+    pub fn angle(self: *Self) f32 {
+        return self.internal_angle;
     }
 
     /// Sets the Sprite's angle of rotation (in degrees)
     pub fn setAngle(self: *Self, new_angle: f32) void {
-        self.angle = new_angle;
+        self.internal_angle = new_angle;
     }
 
     /// Flags for the sprite's texture to be flipped horizontally
@@ -108,18 +116,7 @@ pub const Sprite = struct {
     }
 
     /// Returns whether the Sprite's texture has been flagged to be flipped horizontally
-    pub fn getFlipH(self: *Self) bool {
+    pub fn flipH(self: *Self) bool {
         return self.flip_h;
     }
 };
-
-/// Allocates and builds the Sprite
-/// Comments: The allocated Sprite will be owned by the caller, but the 
-/// allocated Texture is owned by the Resource Handler.
-pub fn buildSprite(allocator: *std.mem.Allocator, texture_name: []const u8, texture_path: []const u8) !*Sprite {
-    var sprite: *Sprite = try allocator.create(Sprite);
-
-    try sprite.build(texture_name, texture_path);
-
-    return sprite;
-}

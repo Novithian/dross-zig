@@ -3,7 +3,7 @@ const c = @import("../../c_global.zig").c_imp;
 const std = @import("std");
 // dross-zig
 const glfb = @import("backend/framebuffer_opengl.zig");
-const FramebufferGl = glfb.FramebufferOpenGl;
+const FramebufferGl = glfb.FramebufferGl;
 const texture = @import("texture.zig");
 const Texture = texture.Texture;
 const renderer = @import("renderer.zig");
@@ -46,7 +46,9 @@ pub const Framebuffer = struct {
     const Self = @This();
 
     /// Sets up the Framebuffer and allocates any required memory
-    pub fn build(self: *Self, allocator: *std.mem.Allocator) void {
+    pub fn new(allocator: *std.mem.Allocator) !*Self {
+        var self = try allocator.create(Framebuffer);
+
         switch (selected_api) {
             renderer.BackendApi.OpenGl => {
                 self.internal = allocator.create(InternalFramebuffer) catch |err| {
@@ -54,7 +56,7 @@ pub const Framebuffer = struct {
                     @panic("[Framebuffer] Failed to create!");
                 };
 
-                self.internal.?.gl = glfb.buildFramebufferOpengl(allocator) catch |err| {
+                self.internal.?.gl = FramebufferGl.new(allocator) catch |err| {
                     std.debug.print("[Framebuffer] Error occurred during creation! {}\n", .{err});
                     @panic("[Framebuffer] Failed to create!");
                 };
@@ -62,15 +64,17 @@ pub const Framebuffer = struct {
             renderer.BackendApi.Dx12 => {},
             renderer.BackendApi.Vulkan => {},
         }
+
+        return self;
     }
 
     /// Frees up any allocated memory
-    pub fn free(self: *Self, allocator: *std.mem.Allocator) void {
-        self.internal.?.gl.free();
-        self.color_attachment.?.free(allocator);
-        allocator.destroy(self.internal.?.gl);
+    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+        FramebufferGl.free(allocator, self.internal.?.gl);
+        Texture.free(allocator, self.color_attachment.?);
+
         allocator.destroy(self.internal.?);
-        allocator.destroy(self.color_attachment.?);
+        allocator.destroy(self);
     }
 
     /// Binds the framebuffer to perform read/write operations on.
@@ -99,12 +103,12 @@ pub const Framebuffer = struct {
     /// Comments: This is one of the few places where the Texture will be owned by 
     /// this class and will be disposed of properly.
     pub fn addColorAttachment(self: *Self, allocator: *std.mem.Allocator, attachment: FramebufferAttachmentType, size: Vector2) void {
-        self.color_attachment = texture.buildDatalessTexture(allocator, size) catch |err| {
+        self.color_attachment = Texture.newDataless(allocator, size) catch |err| {
             std.debug.print("[FRAMEBUFFER]: Error occurred when adding a color attachment! {}\n", .{err});
             return;
         };
 
-        self.attach2d(self.color_attachment.?.getId(), attachment);
+        self.attach2d(self.color_attachment.?.id(), attachment);
     }
 
     /// Checks to see if the framebuffer if complete
@@ -119,9 +123,9 @@ pub const Framebuffer = struct {
     }
 
     /// Returns the color attachment texture id, if a attachment was NOT set it'll return null
-    pub fn getColorAttachment(self: *Self) ?Texture.TextureId {
+    pub fn colorAttachment(self: *Self) ?Texture.TextureId {
         if (self.color_attachment == undefined) return null;
-        return self.color_attachment.?.getId();
+        return self.color_attachment.?.id();
     }
 
     /// Binds the color attachment texture
@@ -140,11 +144,3 @@ pub const Framebuffer = struct {
         }
     }
 };
-
-pub fn buildFramebuffer(allocator: *std.mem.Allocator) !*Framebuffer {
-    var framebuffer = try allocator.create(Framebuffer);
-
-    framebuffer.build(allocator);
-
-    return framebuffer;
-}

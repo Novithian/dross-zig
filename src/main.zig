@@ -82,22 +82,23 @@ pub fn main() anyerror!u8 {
 
     // Setup
     camera = try Camera2d.new(allocator);
+    defer Camera2d.free(allocator, camera);
 
     player = try Player.new(allocator);
 
-    quad_sprite_two = try buildSprite(allocator, "enemy_01_idle", "assets/sprites/s_enemy_01_idle.png");
-    indicator_sprite = try buildSprite(allocator, "indicator", "assets/sprites/s_ui_indicator.png");
+    quad_sprite_two = try Sprite.new(allocator, "enemy_01_idle", "assets/sprites/s_enemy_01_idle.png");
+    indicator_sprite = try Sprite.new(allocator, "indicator", "assets/sprites/s_ui_indicator.png");
 
     //quad_sprite_two.*.setOrigin(Vector2.new(7.0, 14.0));
     //indicator_sprite.*.setOrigin(Vector2.new(8.0, 11.0));
     //indicator_sprite.*.setAngle(30.0);
 
-    defer allocator.destroy(quad_sprite_two);
-    defer allocator.destroy(indicator_sprite);
+    //defer allocator.destroy(quad_sprite_two);
+    //defer allocator.destroy(indicator_sprite);
 
     defer Player.free(allocator, player);
-    defer quad_sprite_two.*.free(allocator);
-    defer indicator_sprite.*.free(allocator);
+    defer Sprite.free(allocator, quad_sprite_two);
+    defer Sprite.free(allocator, indicator_sprite);
 
     quad_position_two = Vector3.new(2.0, 1.0, 1.0);
     indicator_position = Vector3.new(5.0, 5.0, -1.0);
@@ -121,14 +122,14 @@ pub fn update(delta: f64) anyerror!void {
 
     player.update(delta32);
 
-    const quad_old_scale = quad_sprite_two.*.getScale();
-    const indicator_old_angle = indicator_sprite.*.getAngle();
+    const quad_old_scale = quad_sprite_two.*.scale();
+    const indicator_old_angle = indicator_sprite.*.angle();
 
     indicator_sprite.setAngle(indicator_old_angle + rotational_speed);
 
-    // const window_size = Application.getWindowSize();
-    // const zoom = camera.*.getZoom();
-    // const old_camera_position = camera.*.getPosition();
+    // const window_size = Application.windowSize();
+    // const zoom = camera.*.zoom();
+    // const old_camera_position = camera.*.position();
     // const camera_smoothing = 0.075;
 
     // const new_camera_position = Vector3.new(

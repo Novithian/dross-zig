@@ -16,13 +16,11 @@
 		- setters
 		- getters
 		- remove builder
-
 ### Renderer ###
 - Font Rendering
 	- Re-iterate to force an entire text render to a single draw call.
 	- Combined to only use a single texture bind
 - Pixel snap
-- Extract Vertex Arrays, Vertex Buffers, Shaders, and Shader Programs to their own files.
 
 ### Texture ###
 - Texture Atlas
@@ -45,6 +43,25 @@
 - Wrapper for window
 
 ## **LOG** ##
+- **[05-29-2021]**
+	- Finished API refactoring, Engine API should be mostly uniform. Minus the files that do not actually used instances. 
+	- Renamed OpenGlTexture to TextureGl to fit the new Api format.
+	- Renamed FramebufferOpenGl to FramebufferGl
+	- Renamed OpenGlBackend to RendererGl
+		- Renamed backend_opengl.zig to renderer_opengl.zig
+	- Extracted GlVertexBuffer and GlBufferUsage from renderer_opengl.zig to vertex_buffer_opengl.zig
+		- Renamed GlVertexBuffer to VertexBufferGl
+		- Renamed GlBufferUsage to BufferUseageGl
+	- Extracted GlIndexBuffer from renderer_opengl.zig to index_buffer_opengl.zig
+		- Renamed GlIndexBuffer to IndexBufferGl
+	- Extracted GlVertexArray from renderer_opengl.zig to vertex_array_opengl.zig
+		- Renamed GlVertexArray to VertexArrayGl
+	- Extracted GlShader and GlShaderType from renderer_opengl.zig to shader_opengl.zig
+		- Renamed GlShader to ShaderGl
+		- Renamed GlShaderType to ShaderType
+	- Extracted GlShaderProgram from renderer_opengl.zig to shader_program_opengl.zig
+		- Renamed GlShaderProgram to ShaderProgramGl
+	
 - **[05-28-2021]**
 	- Helper function to get text width
 	- Helper function to get text height

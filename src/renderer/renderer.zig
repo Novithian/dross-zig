@@ -4,7 +4,8 @@ const std = @import("std");
 const za = @import("zalgebra");
 
 // dross-zig
-const gl = @import("backend/backend_opengl.zig");
+const gl = @import("backend/renderer_opengl.zig");
+const RendererGl = gl.RendererGl;
 const app = @import("../core/application.zig");
 const Application = app.Application;
 const TextureId = @import("texture.zig").TextureId;
@@ -70,14 +71,16 @@ var renderer: *Renderer = undefined;
 /// The main renderer for the application.
 /// Meant to be MOSTLY backend agnostic.
 pub const Renderer = struct {
-    gl_backend: ?*gl.OpenGlBackend = undefined,
+    gl_backend: ?*RendererGl = undefined,
 
-    /// Builds the graphics API
+    /// Allocates and builds a Renderer instance
     /// Comments: INTERNAL use only. The Renderer will be the owner of the allocated memory.
-    pub fn build(self: *Renderer, allocator: *std.mem.Allocator) anyerror!void {
+    pub fn new(allocator: *std.mem.Allocator) anyerror!void {
+        renderer = try allocator.create(Renderer);
+
         switch (api) {
             BackendApi.OpenGl => {
-                self.gl_backend = try gl.build(allocator);
+                renderer.gl_backend = try RendererGl.new(allocator);
             },
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},
@@ -86,21 +89,24 @@ pub const Renderer = struct {
 
     /// Frees any allocated memory that the Renderer owns
     /// Comments: INTERNAL use only.
-    pub fn free(self: *Renderer, allocator: *std.mem.Allocator) void {
+    pub fn free(allocator: *std.mem.Allocator) void {
+        if (renderer == undefined) return;
+
         switch (api) {
             BackendApi.OpenGl => {
-                self.gl_backend.?.free(allocator);
-                allocator.destroy(self.gl_backend.?);
+                RendererGl.free(allocator, renderer.gl_backend.?);
             },
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},
         }
+
+        allocator.destroy(renderer);
     }
 
     /// Handles the rendering process
     /// Comments: INTERNAL use only.
     pub fn render(render_loop: fn () anyerror!void, gui_render_loop: fn () anyerror!void) void {
-        var camera = Camera.getCurrentCamera();
+        var camera = Camera.currentCamera();
         // Prepare for the user defined render
         Renderer.beginRender(camera.?);
 
@@ -290,7 +296,7 @@ pub const Renderer = struct {
     pub fn clearBoundTexture() void {
         switch (api) {
             BackendApi.OpenGl => {
-                gl.OpenGlBackend.clearBoundTexture();
+                gl.RendererGl.clearBoundTexture();
             },
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},
@@ -327,21 +333,3 @@ pub const Renderer = struct {
         }
     }
 };
-
-/// Allocates and builds the renderer
-/// Comments: INTERNAL use only. The Application will own and
-/// control the lifetime of the Renderer.
-pub fn buildRenderer(allocator: *std.mem.Allocator) anyerror!void {
-    //if (renderer != undefined) return;
-    renderer = try allocator.create(Renderer);
-
-    try renderer.build(allocator);
-}
-
-/// Ensures the Renderer cleans up and frees any allocated memory
-pub fn freeRenderer(allocator: *std.mem.Allocator) !void {
-    if (renderer == undefined) return;
-
-    renderer.free(allocator);
-    allocator.destroy(renderer);
-}

@@ -37,7 +37,7 @@ pub const Glyph = struct {
         desired_advance: u32,
     ) !*Self {
         var glyph = try allocator.create(Glyph);
-        glyph.internal_texture = try tx.buildFontTexture(allocator, data, desired_width, desired_rows);
+        glyph.internal_texture = try Texture.newFont(allocator, data, desired_width, desired_rows);
         glyph.internal_width = desired_width;
         glyph.internal_rows = desired_rows;
         glyph.internal_offset_x = desired_offset_x;
@@ -49,8 +49,7 @@ pub const Glyph = struct {
     /// Cleans up and de-allocates the Glyph and 
     /// any memory it allocated.
     pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
-        self.internal_texture.?.free(allocator);
-        allocator.destroy(self.internal_texture.?);
+        Texture.free(allocator, self.internal_texture.?);
         allocator.destroy(self);
     }
 

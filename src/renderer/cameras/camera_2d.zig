@@ -53,7 +53,7 @@ pub const Camera2d = struct {
     /// Allocates and setup a Camera2D instance
     /// Comments: The caller will own the camera, which
     /// means they will be responsible for freeing.
-    pub fn new(allocator: *std.mem.Allocator) !*Camera2D {
+    pub fn new(allocator: *std.mem.Allocator) !*Camera2d {
         var self = try allocator.create(Camera2d);
 
         self.internal_target_position = Vector3.new(0.0, 0.0, 0.0);
@@ -95,8 +95,8 @@ pub const Camera2d = struct {
     }
 
     /// Sets the zoom level to the desired `zoom`
-    pub fn setZoom(self: *Self, zoom: f32) void {
-        self.internal_zoom = zoom;
+    pub fn setZoom(self: *Self, desired_zoom: f32) void {
+        self.internal_zoom = desired_zoom;
     }
 
     /// Sets the camera speed
@@ -105,7 +105,7 @@ pub const Camera2d = struct {
     }
     /// Sets the position of the camera
     pub fn setPosition(self: *Self, new_position: Vector3) void {
-        self.internal_position = self.position.copy(new_position);
+        self.internal_position = new_position;
     }
 
     /// Returns the zoom of the camera
@@ -127,6 +127,11 @@ pub const Camera2d = struct {
         return self.internal_target_position;
     }
 };
+
+/// Returns the current count of Cameras found in the Scene
+pub fn count() u8 {
+    return camera_count;
+}
 
 /// Returns the current camera if one is set, otherwise it will return null
 pub fn currentCamera() ?*Camera2d {

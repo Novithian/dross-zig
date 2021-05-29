@@ -53,7 +53,7 @@ pub const ResourceHandler = struct {
     /// by the ResourceHandler. The returned Texture pointer is owned and 
     /// released by the ResourceHandler.
     pub fn loadTexture(name: []const u8, path: []const u8) !?*Texture {
-        var texture: *Texture = tx.buildTexture(resource_allocator, name, path) catch |err| {
+        var texture: *Texture = Texture.new(resource_allocator, name, path) catch |err| {
             std.debug.print("[Resource Handler]: Error occurred when loading texture({s})! {}\n", .{ path, err });
             return err;
         };
@@ -68,8 +68,7 @@ pub const ResourceHandler = struct {
     pub fn unloadTexture(name: []const u8) void {
         var texture_entry = texture_map.remove(name);
 
-        texture_entry.?.value.free(resource_allocator);
-        resource_allocator.destroy(texture_entry.?.value);
+        Texture.free(resource_allocator, texture_entry.?.value);
     }
 
     /// Loads a font at the given `path` (relative to build/executable).

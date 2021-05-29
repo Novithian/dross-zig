@@ -8,21 +8,27 @@ const texture = @import("../texture.zig");
 const Texture = texture.Texture;
 
 // -----------------------------------------
-//      - FramebufferOpenGl -
+//      - FramebufferGl -
 // -----------------------------------------
-pub const FramebufferOpenGl = struct {
+pub const FramebufferGl = struct {
     handle: c_uint = undefined,
     target: c_uint = undefined,
     const Self = @This();
 
-    pub fn build(self: *Self) void {
+    pub fn new(allocator: *std.mem.Allocator) !*Self {
+        var self = try allocator.create(FramebufferGl);
+
         // Generate the framebuffer handle
         c.glGenFramebuffers(1, &self.handle);
+
+        return self;
     }
 
-    pub fn free(self: *Self) void {
+    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
         // Delete the buffer
         c.glDeleteFramebuffers(1, &self.handle);
+
+        allocator.destroy(self);
     }
 
     /// Binds the framebuffer
@@ -77,11 +83,3 @@ pub const FramebufferOpenGl = struct {
         }
     }
 };
-
-pub fn buildFramebufferOpengl(allocator: *std.mem.Allocator) !*FramebufferOpenGl {
-    var framebuffer = try allocator.create(FramebufferOpenGl);
-
-    framebuffer.build();
-
-    return framebuffer;
-}

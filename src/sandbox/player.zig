@@ -22,14 +22,13 @@ pub const Player = struct {
     pub fn new(allocator: *std.mem.Allocator) !*Self {
         var new_player = try allocator.create(Player);
         new_player.position = Vector3.new(0.0, 1.0, 0.0);
-        new_player.sprite = try buildSprite(allocator, "player_idle", "assets/sprites/s_player.png");
+        new_player.sprite = try Sprite.new(allocator, "player_idle", "assets/sprites/s_player.png");
         return new_player;
     }
 
     /// Frees any allocated memory
     pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
-        self.sprite.?.free(allocator);
-        allocator.destroy(self.sprite.?);
+        Sprite.free(allocator, self.sprite.?);
         allocator.destroy(self);
     }
 
@@ -37,7 +36,7 @@ pub const Player = struct {
     pub fn update(self: *Self, delta: f32) void {
         const speed: f32 = 8.0 * delta;
         const movement_smoothing = 0.6;
-        const player_direction = self.sprite.?.getFlipH();
+        const player_direction = self.sprite.?.flipH();
         const input_horizontal = Input.keyPressedValue(DrossKey.KeyD) - Input.keyPressedValue(DrossKey.KeyA);
         const input_vertical = Input.keyPressedValue(DrossKey.KeyW) - Input.keyPressedValue(DrossKey.KeyS);
 
@@ -49,7 +48,6 @@ pub const Player = struct {
         ));
 
         self.position = self.position.lerp(target_position, movement_smoothing);
-        //self.position = target_position;
 
         if (input_horizontal > 0.0 and player_direction) {
             self.sprite.?.setFlipH(false);
