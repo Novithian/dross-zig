@@ -157,4 +157,24 @@ pub const Vector3 = struct {
             .data = lhs.data.lerp(rhs.data, t),
         };
     }
+
+    /// Returns a random Vector3 with a minimum range of `min` and
+    /// a maximum range of `max`, inclusively. If 
+    pub fn random(max: f32) !Self {
+        var prng = std.rand.DefaultPrng.init(blk: {
+            var seed: u64 = undefined;
+            try std.os.getrandom(std.mem.asBytes(&seed));
+            break :blk seed;
+        });
+
+        const rand = &prng.random;
+
+        return Self{
+            .data = Vec3.new(
+                rand.float(f32) * max,
+                rand.float(f32) * max,
+                rand.float(f32) * max,
+            ),
+        };
+    }
 };

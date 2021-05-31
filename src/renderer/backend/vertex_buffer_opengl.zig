@@ -3,6 +3,7 @@ const c = @import("../../c_global.zig").c_imp;
 const std = @import("std");
 
 // dross-zig
+const Vertex = @import("../vertex.zig").Vertex;
 // -------------------------------------------------
 
 /// Describes how the data is used over its lifetime.
@@ -61,6 +62,13 @@ pub const VertexBufferGl = struct {
         c.glBufferData(c.GL_ARRAY_BUFFER, vertices_size, vertices_ptr, @enumToInt(usage));
     }
 
+    /// Allocates memory and stores data within the currently bound buffer object.
+    pub fn dataV(self: Self, vertices: []Vertex, usage: BufferUsageGl) void {
+        const vertices_ptr = @ptrCast(*const c_void, vertices.ptr);
+        const vertices_size = @intCast(c_longlong, @sizeOf(Vertex) * vertices.len);
+
+        c.glBufferData(c.GL_ARRAY_BUFFER, vertices_size, vertices_ptr, @enumToInt(usage));
+    }
     /// Allocates memory within the the currently bound buffer object.
     /// `length` is the amount of floats to reserve.
     pub fn dataless(self: Self, length: f32, usage: BufferUsageGl) void {
@@ -72,6 +80,13 @@ pub const VertexBufferGl = struct {
     /// Overwrites previously allocated data within the currently bound buffer object.
     pub fn subdata(self: Self, vertices: []const f32) void {
         const size = @intCast(c_longlong, @sizeOf(f32) * vertices.len);
+        const ptr = @ptrCast(*const c_void, vertices.ptr);
+        c.glBufferSubData(c.GL_ARRAY_BUFFER, 0, size, ptr);
+    }
+
+    /// Overwrites previously allocated data within the currently bound buffer object.
+    pub fn subdataV(self: Self, vertices: []Vertex) void {
+        const size = @intCast(c_longlong, @sizeOf(Vertex) * vertices.len);
         const ptr = @ptrCast(*const c_void, vertices.ptr);
         c.glBufferSubData(c.GL_ARRAY_BUFFER, 0, size, ptr);
     }

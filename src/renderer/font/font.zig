@@ -77,6 +77,7 @@ pub const Font = struct {
 
             // Generate Texture
             var new_glyph = try Glyph.new(allocator, buffer_data, glyph_width, glyph_rows, glyph_offset_x, glyph_offset_y, glyph_x_advance);
+
             //// Add glyph to the list
             try self.glyphs.put(character, new_glyph);
         }

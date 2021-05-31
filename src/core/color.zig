@@ -1,3 +1,4 @@
+const std = @import("std");
 // dross-zig
 const Vector3 = @import("vector3.zig").Vector3;
 
@@ -43,6 +44,24 @@ pub const Color = struct {
     /// Returns a Vector3 filled with the Color's r, g, and b values respectively. 
     pub fn toVector3(self: Self) Vector3 {
         return Vector3.new(self.r, self.g, self.b);
+    }
+
+    /// Returns a random color
+    pub fn random() !Self {
+        var prng = std.rand.DefaultPrng.init(blk: {
+            var seed: u64 = undefined;
+            try std.os.getrandom(std.mem.asBytes(&seed));
+            break :blk seed;
+        });
+
+        const rand = &prng.random;
+
+        return Self{
+            .r = rand.float(f32),
+            .g = rand.float(f32),
+            .b = rand.float(f32),
+            .a = 1.0,
+        };
     }
 
     /// Returns a Color struct with the values (1.0, 1.0, 1.0, 1.0).

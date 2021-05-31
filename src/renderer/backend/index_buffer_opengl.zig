@@ -16,6 +16,8 @@ const BufferUsageGl = vbgl.BufferUsageGl;
 pub const IndexBufferGl = struct {
     /// OpenGL generated ID
     handle: c_uint,
+    /// Number of indices
+    index_count: c_uint,
 
     const Self = @This();
 
@@ -41,13 +43,19 @@ pub const IndexBufferGl = struct {
         return self.handle;
     }
 
+    /// Returns the count of the Index Buffer
+    pub fn count(self: *Self) c_int {
+        return self.index_count;
+    }
+
     /// Binds the Index Buffer
     pub fn bind(self: *Self) void {
         c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, self.handle);
     }
 
     /// Allocates memory and stores data within the the currently bound buffer object.
-    pub fn data(self: Self, indices: []const c_uint, usage: BufferUsageGl) void {
+    pub fn data(self: *Self, indices: []const c_uint, usage: BufferUsageGl) void {
+        self.index_count = @intCast(c_uint, indices.len);
         const indices_ptr = @ptrCast(*const c_void, indices.ptr);
         const indices_size = @intCast(c_longlong, @sizeOf(c_uint) * indices.len);
 

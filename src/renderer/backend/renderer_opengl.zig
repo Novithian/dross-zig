@@ -13,6 +13,7 @@ const shad = @import("shader_opengl.zig");
 const ShaderGl = shad.ShaderGl;
 const ShaderTypeGl = shad.ShaderTypeGl;
 const ShaderProgramGl = @import("shader_program_opengl.zig").ShaderProgramGl;
+const Vertex = @import("../vertex.zig").Vertex;
 // ----
 const Color = @import("../../core/color.zig").Color;
 const texture = @import("../texture.zig");
@@ -60,17 +61,22 @@ const square_indices: [6]c_uint = [6]c_uint{
     2, 3, 0
 };
 
-// zig fmt: off
-const screenbuffer_vertices: [24]f32 = [24]f32{
-    // Positions  / Texture coords
-    -1.0,  1.0,     0.0, 1.0, // Bottom Left
-    -1.0, -1.0,     0.0, 0.0,// Bottom Right
-     1.0, -1.0,     1.0, 0.0,// Top Right
-
-    -1.0,  1.0,     0.0, 1.0,// Top Left
-     1.0, -1.0,     1.0, 0.0,// Top Left
-     1.0,  1.0,     1.0, 1.0,// Top Left
+const screenbuffer_indices: [6]c_uint = [6]c_uint{
+    0, 1, 2,
+    0, 2, 3,
 };
+
+// zig fmt: off
+//const screenbuffer_vertices: [24]f32 = [24]f32{
+//    // Positions  / Texture coords
+//    -1.0,  1.0,     0.0, 1.0, // Bottom Left
+//    -1.0, -1.0,     0.0, 0.0,// Bottom Right
+//     1.0, -1.0,     1.0, 0.0,// Top Right
+//
+//    -1.0,  1.0,     0.0, 1.0,// Top Left
+//     1.0, -1.0,     1.0, 0.0,// Top Left
+//     1.0,  1.0,     1.0, 1.0,// Top Left
+//};
 
 // -----------------------------------------
 //      - OpenGL Reference Material -
@@ -117,6 +123,15 @@ pub const GlPackingMode = enum(c_uint) {
     Unpack = c.GL_UNPACK_ALIGNMENT,
 };
 
+// -----------------------------------------
+//      - Renderer Maximums -
+// -----------------------------------------
+/// Maximum amount of quads per draw call
+const MAX_QUADS = 10000;
+/// Maximum amount of vertices used per draw call
+const MAX_VERTICES = MAX_QUADS * 4;
+/// Maximum amount of indices used per draw call
+const MAX_INDICES = MAX_QUADS * 6;
 
 // -----------------------------------------
 //      - RendererGl -
@@ -140,6 +155,7 @@ pub const RendererGl = struct {
 
     screenbuffer_vertex_array: ?*VertexArrayGl = undefined,
     screenbuffer_vertex_buffer: ?*VertexBufferGl = undefined,
+    screenbuffer_index_buffer: ?*IndexBufferGl = undefined,
 
     font_renderer_vertex_array: ?*VertexArrayGl = undefined,
     font_renderer_vertex_buffer: ?*VertexBufferGl = undefined,
@@ -151,11 +167,17 @@ pub const RendererGl = struct {
     clear_color: Color = undefined,
     default_draw_color: Color = undefined,
 
-    debug_texture: ?*texture.Texture = undefined,
+    default_texture: ?*texture.Texture = undefined,
 
     screenbuffer: ?*Framebuffer = undefined,
 
     projection_view: ?Matrix4 = undefined,
+
+    quad_vertices: std.ArrayList(Vertex) = undefined,
+    index_count: u32 = 0,
+
+    screenbuffer_vertices: std.ArrayList(Vertex) = undefined,
+
 
     const Self = @This();
 
@@ -165,6 +187,34 @@ pub const RendererGl = struct {
         if (c.gladLoadGLLoader(@ptrCast(c.GLADloadproc, c.glfwGetProcAddress)) == 0) return OpenGlError.GladFailure;
 
         var self = try allocator.create(RendererGl);
+
+        // Set up the default quad vertices
+        self.quad_vertices = std.ArrayList(Vertex).init(allocator);
+        
+        // Bottom Left 
+        try self.quad_vertices.append(Vertex{.x = 0.0, .y = 0.0, .z = 0.0, .u = 0.0, .v = 0.0,});
+        // Bottom Right
+        try self.quad_vertices.append(Vertex{.x = 1.0, .y = 0.0, .z = 0.0, .u = 1.0, .v = 0.0,});
+        // Top Right
+        try self.quad_vertices.append(Vertex{.x = 1.0, .y = 1.0, .z = 0.0, .u = 1.0, .v = 1.0,});
+        // Top Left
+        try self.quad_vertices.append(Vertex{.x = 0.0, .y = 1.0, .z = 0.0, .u = 0.0, .v = 1.0,});
+        // -------------------
+        
+        // Set up the screenbuffer vertices
+        self.screenbuffer_vertices = std.ArrayList(Vertex).init(allocator);
+        // Top Left
+        try self.screenbuffer_vertices.append(Vertex{.x = 1.0, .y = 1.0, .z = 0.0, .u = 1.0, .v = 1.0,});
+        // Bottom Left 
+        try self.screenbuffer_vertices.append(Vertex{.x = -1.0, .y = 1.0, .z = 0.0, .u = 0.0, .v = 1.0,});
+        // Bottom Right
+        try self.screenbuffer_vertices.append(Vertex{.x = -1.0, .y = -1.0, .z = 0.0, .u = 0.0, .v = 0.0,});
+        // Top Right
+        try self.screenbuffer_vertices.append(Vertex{.x = 1.0, .y = -1.0, .z = 0.0, .u = 1.0, .v = 0.0,});
+
+        // -------------------
+
+
 
         // Sets the pixel storage mode that affefcts the operation
         // of subsequent glReadPixel as well as unpacking texture patterns.
@@ -302,6 +352,7 @@ pub const RendererGl = struct {
         // --
         self.screenbuffer_vertex_array = try VertexArrayGl.new(allocator);
         self.screenbuffer_vertex_buffer = try VertexBufferGl.new(allocator);
+        self.screenbuffer_index_buffer = try IndexBufferGl.new(allocator);
         // --
         self.font_renderer_vertex_array = try VertexArrayGl.new(allocator);
         self.font_renderer_vertex_buffer = try VertexBufferGl.new(allocator);
@@ -318,16 +369,36 @@ pub const RendererGl = struct {
 
         // Bind VBO
         self.vertex_buffer.?.bind();
-        var vertices_slice = square_vertices[0..];
-        self.vertex_buffer.?.data(vertices_slice, BufferUsageGl.StaticDraw);
+        //var vertices_slice = square_vertices[0..];
+        var vertices_slice = self.quad_vertices.items[0..];
+        //self.vertex_buffer.?.data(vertices_slice, BufferUsageGl.StaticDraw);
+        self.vertex_buffer.?.dataV(vertices_slice, BufferUsageGl.StaticDraw);
+        
+
+        // Fill the indices
+        // This will be deleted once we get out of scope.
+        var quad_indices_ar: [MAX_INDICES]c_uint = undefined;
+        var indicies_index: usize = 0;
+        var index_offset: c_uint = 0;
+        while(indicies_index < MAX_INDICES) : (indicies_index += 6) {
+            quad_indices_ar[indicies_index + 0] = index_offset + 0;
+            quad_indices_ar[indicies_index + 1] = index_offset + 1;
+            quad_indices_ar[indicies_index + 2] = index_offset + 2;
+            quad_indices_ar[indicies_index + 3] = index_offset + 2;
+            quad_indices_ar[indicies_index + 4] = index_offset + 3;
+            quad_indices_ar[indicies_index + 5] = index_offset + 0;
+
+            index_offset += 4;
+        }
 
         // Bind IB
         self.index_buffer.?.bind();
-        var indicies_slice = square_indices[0..];
+        var indicies_slice = quad_indices_ar[0..];
         self.index_buffer.?.data(indicies_slice, BufferUsageGl.StaticDraw);
 
-        const size_of_vatb = 5;
-        const stride = @intCast(c_longlong, @sizeOf(f32) * size_of_vatb);
+        //const size_of_vatb = 5;
+        const stride = @intCast(c_longlong, @sizeOf(Vertex));
+        //const stride = @intCast(c_longlong, @sizeOf(f32) * size_of_vatb);
         const offset_position: u32 = 0;
         const offset_tex: u32 =  3 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
         const index_zero: c_int = 0;
@@ -361,7 +432,7 @@ pub const RendererGl = struct {
             @intToPtr(?*c_void, offset_tex), // Offset
         );
 
-        // Enable Color Attributes
+        // Enable Texture Coordinate Attribute
         c.glEnableVertexAttribArray(index_one);
 
         // Unbind the VBO
@@ -375,17 +446,26 @@ pub const RendererGl = struct {
         // ---------------------------------------------------
         self.screenbuffer_vertex_array.?.bind();
         self.screenbuffer_vertex_buffer.?.bind();
-        var screenbuffer_vertices_slice = screenbuffer_vertices[0..];
-        self.screenbuffer_vertex_buffer.?.data(screenbuffer_vertices_slice, BufferUsageGl.StaticDraw);
+        var screenbuffer_vertices_slice = self.screenbuffer_vertices.items[0..];
+        //var screenbuffer_vertices_slice = screenbuffer_vertices[0..];
+        self.screenbuffer_vertex_buffer.?.dataV(screenbuffer_vertices_slice, BufferUsageGl.StaticDraw);
+        //self.screenbuffer_vertex_buffer.?.data(screenbuffer_vertices_slice, BufferUsageGl.StaticDraw);
+        // Bind IB
+        self.screenbuffer_index_buffer.?.bind();
+        var buffer_slice = screenbuffer_indices[0..];
+        self.screenbuffer_index_buffer.?.data(buffer_slice, BufferUsageGl.StaticDraw);
 
-        const screenbuffer_stride = @intCast(c_longlong, @sizeOf(f32) * 4);
-        const screenbuffer_offset_tex: u32 =  2 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
+
+        //const screenbuffer_stride = @intCast(c_longlong, @sizeOf(f32) * 4);
+        const screenbuffer_stride = @intCast(c_longlong, @sizeOf(Vertex));
+        //const screenbuffer_offset_tex: u32 =  2 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
+        const screenbuffer_offset_tex: u32 =  3 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
 
         c.glEnableVertexAttribArray(index_zero);
 
         c.glVertexAttribPointer(
             index_zero, 
-            size_tex_coords,
+            size_position,
             c.GL_FLOAT,
             c.GL_FALSE,
             screenbuffer_stride,
@@ -472,10 +552,10 @@ pub const RendererGl = struct {
         self.clear_color = Color.rgb(0.2, 0.2, 0.2);
         self.default_draw_color = Color.rgb(1.0, 1.0, 1.0);
  
-        // TODO(devon): remove 
-        // For debug purposes only
-        const debug_texture_op = try rh.ResourceHandler.loadTexture("default_texture", "assets/textures/t_default.png");
-        self.debug_texture = debug_texture_op orelse return texture.TextureErrors.FailedToLoad;
+        // Create the default texture 
+        // TODO(devon): Switch from an actual texture to a dataless on with a width and height of (1,1)
+        const default_texture_op = try rh.ResourceHandler.loadTexture("default_texture", "assets/textures/t_default.png");
+        self.default_texture = default_texture_op orelse return texture.TextureErrors.FailedToLoad;
 
 
         return self;
@@ -493,6 +573,7 @@ pub const RendererGl = struct {
         // - Screenbuffer
         VertexArrayGl.free(allocator, self.screenbuffer_vertex_array.?);
         VertexBufferGl.free(allocator, self.screenbuffer_vertex_buffer.?);
+        IndexBufferGl.free(allocator, self.screenbuffer_index_buffer.?);
         ShaderProgramGl.free(allocator, self.screenbuffer_program.?);
         Framebuffer.free(allocator, self.screenbuffer.?);
             
@@ -505,6 +586,10 @@ pub const RendererGl = struct {
         VertexArrayGl.free(allocator, self.gui_renderer_vertex_array.?);
         VertexBufferGl.free(allocator, self.gui_renderer_vertex_buffer.?);
         ShaderProgramGl.free(allocator, self.gui_renderer_program.?);
+
+        // ---
+        self.quad_vertices.deinit();
+        self.screenbuffer_vertices.deinit();
         
         allocator.destroy(self);
 
@@ -512,6 +597,9 @@ pub const RendererGl = struct {
     
     /// Setups up the OpenGL specific components for rendering
     pub fn beginRender(self: *Self, camera: *Camera.Camera2d) void {
+        // Reset index count
+        self.index_count = 0;
+
         // Bind framebuffer
         self.screenbuffer.?.bind(framebuffa.FramebufferType.Both);
 
@@ -581,6 +669,21 @@ pub const RendererGl = struct {
 
     /// Handles the framebuffer and clean up for the end of the user-defined render event
     pub fn endRender(self: *Self) void {
+
+        // Batch render the scene (minus the GUI)
+        // GUI will get a seperate batch render to
+        // allow for the game world to use a virtual viewport.
+        // i.e.: 320x180 in-game resolution on a 1280x720 
+        // window.
+        
+        // Upload buffer data
+        // Bind Buffer
+        self.vertex_buffer.?.bind();
+        // Subdata
+        self.vertex_buffer.?.subdataV(self.quad_vertices.items[0..]);
+        // Flush
+        self.flush();
+
         // Bind the default frame buffer 
         framebuffa.Framebuffer.resetFramebuffer();
 
@@ -599,16 +702,38 @@ pub const RendererGl = struct {
         self.screenbuffer.?.bindColorAttachment();
 
         // Draw the quad
-        c.glDrawArrays(c.GL_TRIANGLES, 0, 6);
+        RendererGl.drawIndexed(6);
 
         FrameStatistics.incrementQuadCount();
+    }
+
+    /// Draws geometry with a index buffer
+    pub fn drawIndexed(index_count: u32) void {
+        const offset = @intToPtr(?*c_void, 0);
+        //const count: u32 = if (index_count == 0) v
+        // Draw 
+        c.glDrawElements(
+            c.GL_TRIANGLES, // Primitive mode
+            @intCast(c_int, index_count), // Number of vertices/elements to draw
+            c.GL_UNSIGNED_INT, // Type of values in indices
+            offset, // Offset in a buffer or a pointer to the location where the indices are stored
+        );
+
         FrameStatistics.incrementDrawCall();
     }
+    
+ 
+    /// Submit the render batch to OpenGl
+    pub fn flush(self: *Self) void {
         
+        RendererGl.drawIndexed(self.index_count);
+    }
+
+       
     /// Sets up renderer to be able to draw a untextured quad.
     pub fn drawQuad(self: *Self, position: Vector3) void {
          // Bind Texture
-        c.glBindTexture(c.GL_TEXTURE_2D, self.debug_texture.?.id().id_gl);
+        c.glBindTexture(c.GL_TEXTURE_2D, self.default_texture.?.id().id_gl);
 
         // Translation * Rotation * Scale
         const transform = Matrix4.fromTranslate(position);
@@ -619,15 +744,17 @@ pub const RendererGl = struct {
         // Bind the VAO
         self.vertex_array.?.bind();
         
-        RendererGl.drawIndexed();
+        RendererGl.drawIndexed(6);
+
+        self.index_count += 6;
 
         FrameStatistics.incrementQuadCount();
     }
     
     /// Sets up renderer to be able to draw a untextured quad.
     pub fn drawColoredQuad(self: *Self, position: Vector3, size: Vector3, color: Color) void {
-         // Bind Texture
-        c.glBindTexture(c.GL_TEXTURE_2D, self.debug_texture.?.id().id_gl);
+        // Bind Texture
+        c.glBindTexture(c.GL_TEXTURE_2D, self.default_texture.?.id().id_gl);
 
         // Translation * Rotation * Scale
         var transform = Matrix4.fromTranslate(position);
@@ -639,11 +766,35 @@ pub const RendererGl = struct {
         // Bind the VAO
         self.vertex_array.?.bind();
         
-        RendererGl.drawIndexed();
+        RendererGl.drawIndexed(6);
+
+        self.index_count += 6;
 
         FrameStatistics.incrementQuadCount();
     }
     
+    /// Sets up renderer to be able to draw a untextured quad.
+    //pub fn drawColoredQuad(self: *Self, position: Vector3, size: Vector3, color: Color) void {
+    //    // Bind Texture
+    //    c.glBindTexture(c.GL_TEXTURE_2D, self.default_texture.?.id().id_gl);
+
+    //    // Translation * Rotation * Scale
+    //    var transform = Matrix4.fromTranslate(position);
+    //    transform = transform.scale(size);
+
+    //    self.shader_program.?.setMatrix4("model", transform);
+    //    self.shader_program.?.setFloat3("sprite_color", color.r, color.g, color.b);
+
+    //    // Bind the VAO
+    //    self.vertex_array.?.bind();
+    //    
+    //    RendererGl.drawIndexed(6);
+
+    //    self.index_count += 6;
+
+    //    FrameStatistics.incrementQuadCount();
+    //}
+
     /// Sets up renderer to be able to draw a untextured quad.
     pub fn drawColoredQuadGui(self: *Self, position: Vector3, size: Vector3, color: Color) void {
         // Use Text Rendering shader program
@@ -659,7 +810,7 @@ pub const RendererGl = struct {
         self.gui_renderer_vertex_array.?.bind();
 
          // Bind Texture
-        c.glBindTexture(c.GL_TEXTURE_2D, self.debug_texture.?.id().id_gl);
+        c.glBindTexture(c.GL_TEXTURE_2D, self.default_texture.?.id().id_gl);
 
         const x = position.x();
         const y = position.y();
@@ -724,7 +875,9 @@ pub const RendererGl = struct {
         // Bind the VAO
         self.vertex_array.?.bind();
         
-        RendererGl.drawIndexed();
+        RendererGl.drawIndexed(6);
+
+        self.index_count += 6;
 
         FrameStatistics.incrementQuadCount();
     }
@@ -787,7 +940,9 @@ pub const RendererGl = struct {
         // Bind the VAO
         self.vertex_array.?.bind();
         
-        RendererGl.drawIndexed();
+        RendererGl.drawIndexed(6);
+
+        self.index_count += 6;
 
         FrameStatistics.incrementQuadCount();
     }
@@ -867,21 +1022,6 @@ pub const RendererGl = struct {
         VertexArrayGl.clearBoundVertexArray();
         clearBoundTexture();
        
-    }
-
-    /// Draws geometry with a index buffer
-    pub fn drawIndexed() void {
-        const offset = @intToPtr(?*c_void, 0);
-
-        // Draw 
-        c.glDrawElements(
-            c.GL_TRIANGLES, // Primitive mode
-            6, // Number of vertices/elements to draw
-            c.GL_UNSIGNED_INT, // Type of values in indices
-            offset, // Offset in a buffer or a pointer to the location where the indices are stored
-        );
-
-        FrameStatistics.incrementDrawCall();
     }
 
     /// Changes to clear color

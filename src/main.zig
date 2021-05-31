@@ -55,6 +55,12 @@ const white: Color = .{
 
 const ground_position: Vector3 = Vector3.new(0.0, 0.0, 0.0);
 const ground_scale: Vector3 = Vector3.new(20.0, 1.0, 0.0);
+const indentity_scale: Vector3 = Vector3.new(1.0, 1.0, 0.0);
+
+const max_random = 20.0;
+const random_count = 1000.0;
+var random_positions: []Vector3 = undefined;
+var random_colors: []Color = undefined;
 
 pub fn main() anyerror!u8 {
 
@@ -105,6 +111,20 @@ pub fn main() anyerror!u8 {
 
     Renderer.changeClearColor(background_color);
 
+    var random_positions_arr: [random_count]Vector3 = undefined;
+    var random_colors_arr: [random_count]Color = undefined;
+
+    var count: usize = random_count;
+    var index: usize = 0;
+
+    while (index < count) : (index += 1) {
+        random_positions_arr[index] = try Vector3.random(max_random);
+        random_colors_arr[index] = try Color.random();
+    }
+
+    random_positions = random_positions_arr[0..];
+    random_colors = random_colors_arr[0..];
+
     // Begin the game loop
     app.run(update, render, gui_render);
 
@@ -143,10 +163,20 @@ pub fn update(delta: f64) anyerror!void {
 
 /// Defines the game-level rendering
 pub fn render() anyerror!void {
-    player.render();
-    Renderer.drawSprite(quad_sprite_two, quad_position_two);
-    Renderer.drawSprite(indicator_sprite, indicator_position);
+    //player.render();
+    //Renderer.drawSprite(quad_sprite_two, quad_position_two);
+    //Renderer.drawSprite(indicator_sprite, indicator_position);
     Renderer.drawColoredQuad(ground_position, ground_scale, ground_color);
+    Renderer.drawColoredQuad(player.position, indentity_scale, ground_color);
+    Renderer.drawColoredQuad(indicator_position, indentity_scale, ground_color);
+    Renderer.drawColoredQuad(quad_position_two, indentity_scale, ground_color);
+
+    var count: usize = random_count;
+    var index: usize = 0;
+
+    while (index < count) : (index += 1) {
+        Renderer.drawColoredQuad(random_positions[index], indentity_scale, random_colors[index]);
+    }
 }
 
 /// Defines the game-level gui rendering
@@ -162,4 +192,15 @@ pub fn gui_render() anyerror!void {
     //Renderer.drawText(user_message, 5.0, 5.0, 1.0, white);
     //Renderer.drawText(ass_string, 5.0, 5.0 + user_height, 1.0, white);
     //Renderer.drawText(skate_string, 5.0 + ass_width, 5.0 + user_height, 1.0, white);
+
+    //const stupid_message: []const u8 = "I want to run a test to see how many textured quads it'll take to slow this down.";
+
+    //const stupid_height = getStringHeight(stupid_message, 1.0);
+
+    //const count: usize = 20;
+    //var index: usize = 0;
+
+    //while (index < count) : (index += 1) {
+    //    Renderer.drawText(stupid_message, 5.0, 5.0 + (stupid_height * @intToFloat(f32, index)), 1.0, white);
+    //}
 }

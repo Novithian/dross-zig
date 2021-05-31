@@ -9,14 +9,9 @@
 
 ### General ###
 - Wrapper for zalgebra vec4
-- Revise the engine APIs. Maybe move away from builder functions and opt for in-struct build function.
-	- Checklist:
-		- [ ] new
-		- [ ] free
-		- setters
-		- getters
-		- remove builder
+
 ### Renderer ###
+- Batch Rendering
 - Font Rendering
 	- Re-iterate to force an entire text render to a single draw call.
 	- Combined to only use a single texture bind
@@ -43,6 +38,10 @@
 - Wrapper for window
 
 ## **LOG** ##
+- **[05-30-2021]**
+	- Looking into batch rendering
+	- Working on batch rendering with colored quads first.
+	- Added random functions for Vector3 and Color for testing purposes.
 - **[05-29-2021]**
 	- Finished API refactoring, Engine API should be mostly uniform. Minus the files that do not actually used instances. 
 	- Renamed OpenGlTexture to TextureGl to fit the new Api format.

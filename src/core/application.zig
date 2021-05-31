@@ -139,7 +139,7 @@ pub const Application = struct {
     ) void {
 
         // Pre-run checks
-        if (cam.count() <= 0) {
+        if (cam.cameraCount() <= 0) {
             std.debug.print("[Application]: No camera could be found in the scene!\n", .{});
             @panic("[Application]: Error occurred before starting the application loop!\n");
         }

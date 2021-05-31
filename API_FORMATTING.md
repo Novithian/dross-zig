@@ -1,5 +1,4 @@
 ## Framework API Formatting
-- Ditch the builder pattern
 - .new(allocator) *Self, .free(allocator, self)	
 	- - **New**:  init/create/build a new instance of the structure.
 	- **Free**: allocator will destroy the instance after calling a clean method
@@ -33,7 +32,7 @@
 				- texture_vulkan.zig
 
 ## Refactor Progress:
-- [ ] main.zig 
+- [x] main.zig 
 ### Sandbox
 - [x] player.zig
 ### Utils

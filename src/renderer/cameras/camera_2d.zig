@@ -129,7 +129,7 @@ pub const Camera2d = struct {
 };
 
 /// Returns the current count of Cameras found in the Scene
-pub fn count() u8 {
+pub fn cameraCount() u8 {
     return camera_count;
 }
 
