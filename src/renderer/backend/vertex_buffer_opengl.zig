@@ -69,6 +69,16 @@ pub const VertexBufferGl = struct {
 
         c.glBufferData(c.GL_ARRAY_BUFFER, vertices_size, vertices_ptr, @enumToInt(usage));
     }
+    ///
+    /// Allocates memory and stores data within the currently bound buffer object.
+    pub fn dataSize(self: Self, vertices: []Vertex, size: u32, usage: BufferUsageGl) void {
+        const vertices_ptr = @ptrCast(*const c_void, vertices.ptr);
+        //const vertices_size = @intCast(c_longlong, @sizeOf(Vertex) * vertices.len);
+        const size = @intCast(c_longlong, size);
+
+        c.glBufferData(c.GL_ARRAY_BUFFER, vertices_size, vertices_ptr, @enumToInt(usage));
+    }
+
     /// Allocates memory within the the currently bound buffer object.
     /// `length` is the amount of floats to reserve.
     pub fn dataless(self: Self, length: f32, usage: BufferUsageGl) void {
@@ -91,6 +101,13 @@ pub const VertexBufferGl = struct {
         c.glBufferSubData(c.GL_ARRAY_BUFFER, 0, size, ptr);
     }
 
+    /// Overwrites previously allocated data within the currently bound buffer object.
+    pub fn subdataSize(self: Self, vertices: []Vertex, size: u32) void {
+        //const size = @intCast(c_longlong, @sizeOf(Vertex) * vertices.len);
+        const vertices_size = @intCast(c_longlong, size);
+        const ptr = @ptrCast(*const c_void, vertices.ptr);
+        c.glBufferSubData(c.GL_ARRAY_BUFFER, 0, vertices_size, ptr);
+    }
     /// Clears out the currently bound Vertex Buffer
     pub fn clearBoundVertexBuffer() void {
         c.glBindBuffer(c.GL_ARRAY_BUFFER, 0);

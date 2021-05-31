@@ -3,6 +3,7 @@
 out vec4 color;
 
 in vec2 tex_coords;
+in vec4 draw_color;
 
 uniform sampler2D screen_texture;
 

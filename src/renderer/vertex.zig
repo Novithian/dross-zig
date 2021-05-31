@@ -14,8 +14,12 @@ pub const Vertex = packed struct {
     x: f32,
     y: f32,
     z: f32,
-    /// Horizontal texture coordinate
+    /// Vertex Color
+    r: f32,
+    g: f32,
+    b: f32,
+    a: f32,
+    /// Texture coordinate
     u: f32,
-    /// Vertical texture coordinate
     v: f32,
 };

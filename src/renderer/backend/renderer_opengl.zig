@@ -173,8 +173,12 @@ pub const RendererGl = struct {
 
     projection_view: ?Matrix4 = undefined,
 
-    quad_vertices: std.ArrayList(Vertex) = undefined,
+    //quad_vertices: std.ArrayList(Vertex) = undefined,
+    quad_vertex_base: []Vertex = undefined,
+    quad_vertex_ptr: [*]Vertex = undefined,
+
     index_count: u32 = 0,
+    vertex_count: u32 = 0,
 
     screenbuffer_vertices: std.ArrayList(Vertex) = undefined,
 
@@ -189,28 +193,42 @@ pub const RendererGl = struct {
         var self = try allocator.create(RendererGl);
 
         // Set up the default quad vertices
-        self.quad_vertices = std.ArrayList(Vertex).init(allocator);
+        //self.quad_vertices = std.ArrayList(Vertex).init(allocator);
+        // TODO(devon): Change to ensureTotalCapacity when Zig is upgraded to master.
+        //try self.quad_vertices.ensureCapacity(MAX_VERTICES * @sizeOf(Vertex));
+        self.quad_vertex_base = try allocator.alloc(Vertex, MAX_VERTICES);
+        self.quad_vertex_ptr = self.quad_vertex_base.ptr;
+
+        self.index_count = 0;
         
-        // Bottom Left 
-        try self.quad_vertices.append(Vertex{.x = 0.0, .y = 0.0, .z = 0.0, .u = 0.0, .v = 0.0,});
-        // Bottom Right
-        try self.quad_vertices.append(Vertex{.x = 1.0, .y = 0.0, .z = 0.0, .u = 1.0, .v = 0.0,});
-        // Top Right
-        try self.quad_vertices.append(Vertex{.x = 1.0, .y = 1.0, .z = 0.0, .u = 1.0, .v = 1.0,});
-        // Top Left
-        try self.quad_vertices.append(Vertex{.x = 0.0, .y = 1.0, .z = 0.0, .u = 0.0, .v = 1.0,});
         // -------------------
         
         // Set up the screenbuffer vertices
         self.screenbuffer_vertices = std.ArrayList(Vertex).init(allocator);
         // Top Left
-        try self.screenbuffer_vertices.append(Vertex{.x = 1.0, .y = 1.0, .z = 0.0, .u = 1.0, .v = 1.0,});
+        try self.screenbuffer_vertices.append(Vertex{
+            .x = 1.0, .y = 1.0, .z = 0.0, 
+            .r = 1.0, .g = 1.0, .b = 1.0, .a = 1.0,
+            .u = 1.0, .v = 1.0,
+        });
         // Bottom Left 
-        try self.screenbuffer_vertices.append(Vertex{.x = -1.0, .y = 1.0, .z = 0.0, .u = 0.0, .v = 1.0,});
+        try self.screenbuffer_vertices.append(Vertex{
+            .x = -1.0, .y = 1.0, .z = 0.0, 
+            .r = 1.0, .g = 1.0, .b = 1.0, .a = 1.0,
+            .u = 0.0, .v = 1.0,
+        });
         // Bottom Right
-        try self.screenbuffer_vertices.append(Vertex{.x = -1.0, .y = -1.0, .z = 0.0, .u = 0.0, .v = 0.0,});
+        try self.screenbuffer_vertices.append(Vertex{
+            .x = -1.0, .y = -1.0, .z = 0.0, 
+            .r = 1.0, .g = 1.0, .b = 1.0, .a = 1.0,
+            .u = 0.0, .v = 0.0,
+        });
         // Top Right
-        try self.screenbuffer_vertices.append(Vertex{.x = 1.0, .y = -1.0, .z = 0.0, .u = 1.0, .v = 0.0,});
+        try self.screenbuffer_vertices.append(Vertex{
+            .x = 1.0, .y = -1.0, .z = 0.0, 
+            .r = 1.0, .g = 1.0, .b = 1.0, .a = 1.0,
+            .u = 1.0, .v = 0.0,
+        });
 
         // -------------------
 
@@ -370,9 +388,11 @@ pub const RendererGl = struct {
         // Bind VBO
         self.vertex_buffer.?.bind();
         //var vertices_slice = square_vertices[0..];
-        var vertices_slice = self.quad_vertices.items[0..];
+        //var vertices_slice = self.quad_vertices.items[0..];
+        //var vertices_slice = self.quad_vertex_base[0..];
         //self.vertex_buffer.?.data(vertices_slice, BufferUsageGl.StaticDraw);
-        self.vertex_buffer.?.dataV(vertices_slice, BufferUsageGl.StaticDraw);
+        //self.vertex_buffer.?.dataV(vertices_slice, BufferUsageGl.DynamicDraw);
+        self.vertex_buffer.?.dataV(self.quad_vertex_base, BufferUsageGl.DynamicDraw);
         
 
         // Fill the indices
@@ -400,10 +420,14 @@ pub const RendererGl = struct {
         const stride = @intCast(c_longlong, @sizeOf(Vertex));
         //const stride = @intCast(c_longlong, @sizeOf(f32) * size_of_vatb);
         const offset_position: u32 = 0;
-        const offset_tex: u32 =  3 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
+        const offset_color: u32 = 3 * @sizeOf(f32);
+        const offset_tex: u32 =  7 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
+        //const offset_tex: u32 =  3 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
         const index_zero: c_int = 0;
         const index_one: c_int = 1;
+        const index_two: c_int = 2;
         const size_position: c_uint = 3;
+        const size_color: c_uint = 4;
         const size_tex_coords: c_uint = 2;
 
         // Tells OpenGL how to interpret the vertex data(per vertex attribute)
@@ -425,6 +449,20 @@ pub const RendererGl = struct {
         // Texture Coordinates Attribute
         c.glVertexAttribPointer(
             index_one, // Which vertex attribute we want to configure
+            size_color, // Size of vertex attribute (vec2 in this case)
+            c.GL_FLOAT, // Type of data
+            c.GL_FALSE, // Should the data be normalized?
+            stride, // Stride
+            @intToPtr(?*c_void, offset_color), // Offset
+        );
+
+        // Enable Texture Coordinate Attribute
+        c.glEnableVertexAttribArray(index_one);
+
+
+        // Texture Coordinates Attribute
+        c.glVertexAttribPointer(
+            index_two, // Which vertex attribute we want to configure
             size_tex_coords, // Size of vertex attribute (vec2 in this case)
             c.GL_FLOAT, // Type of data
             c.GL_FALSE, // Should the data be normalized?
@@ -433,7 +471,7 @@ pub const RendererGl = struct {
         );
 
         // Enable Texture Coordinate Attribute
-        c.glEnableVertexAttribArray(index_one);
+        c.glEnableVertexAttribArray(index_two);
 
         // Unbind the VBO
         c.glBindBuffer(c.GL_ARRAY_BUFFER, index_zero);
@@ -459,7 +497,8 @@ pub const RendererGl = struct {
         //const screenbuffer_stride = @intCast(c_longlong, @sizeOf(f32) * 4);
         const screenbuffer_stride = @intCast(c_longlong, @sizeOf(Vertex));
         //const screenbuffer_offset_tex: u32 =  2 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
-        const screenbuffer_offset_tex: u32 =  3 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
+        const screenbuffer_offset_color: u32 = 3 * @sizeOf(f32);
+        const screenbuffer_offset_tex: u32 =  7 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
 
         c.glEnableVertexAttribArray(index_zero);
 
@@ -476,13 +515,23 @@ pub const RendererGl = struct {
 
         c.glVertexAttribPointer(
             index_one, 
+            size_color,
+            c.GL_FLOAT,
+            c.GL_FALSE,
+            screenbuffer_stride,
+            @intToPtr(?*c_void, screenbuffer_offset_color), // Offset
+        );
+
+        c.glEnableVertexAttribArray(index_two);
+
+        c.glVertexAttribPointer(
+            index_two, 
             size_tex_coords,
             c.GL_FLOAT,
             c.GL_FALSE,
             screenbuffer_stride,
             @intToPtr(?*c_void, screenbuffer_offset_tex), // Offset
         );
-
 
         // Setup framebuffers
         // const screen_buffer_size = Vector2.new(1280, 720);
@@ -588,7 +637,8 @@ pub const RendererGl = struct {
         ShaderProgramGl.free(allocator, self.gui_renderer_program.?);
 
         // ---
-        self.quad_vertices.deinit();
+        //self.quad_vertices.deinit();
+        allocator.free(self.quad_vertex_base);
         self.screenbuffer_vertices.deinit();
         
         allocator.destroy(self);
@@ -599,6 +649,7 @@ pub const RendererGl = struct {
     pub fn beginRender(self: *Self, camera: *Camera.Camera2d) void {
         // Reset index count
         self.index_count = 0;
+        self.quad_vertex_ptr = self.quad_vertex_base.ptr;
 
         // Bind framebuffer
         self.screenbuffer.?.bind(framebuffa.FramebufferType.Both);
@@ -665,6 +716,7 @@ pub const RendererGl = struct {
         self.shader_program.?.use();
         self.shader_program.?.setMatrix4("projection", projection);
         self.shader_program.?.setMatrix4("view", view);
+        self.vertex_array.?.bind();
     }
 
     /// Handles the framebuffer and clean up for the end of the user-defined render event
@@ -680,7 +732,11 @@ pub const RendererGl = struct {
         // Bind Buffer
         self.vertex_buffer.?.bind();
         // Subdata
-        self.vertex_buffer.?.subdataV(self.quad_vertices.items[0..]);
+        //self.vertex_buffer.?.subdataV(self.quad_vertices.items[0..]);
+        const data_size: u32 = @intCast(u32,
+            @ptrToInt(self.quad_vertex_ptr) - @ptrToInt(self.quad_vertex_base.ptr)
+        );
+        self.vertex_buffer.?.subdataSize(self.quad_vertex_base, data_size);
         // Flush
         self.flush();
 
@@ -753,21 +809,72 @@ pub const RendererGl = struct {
     
     /// Sets up renderer to be able to draw a untextured quad.
     pub fn drawColoredQuad(self: *Self, position: Vector3, size: Vector3, color: Color) void {
-        // Bind Texture
-        c.glBindTexture(c.GL_TEXTURE_2D, self.default_texture.?.id().id_gl);
-
-        // Translation * Rotation * Scale
-        var transform = Matrix4.fromTranslate(position);
-        transform = transform.scale(size);
-
-        self.shader_program.?.setMatrix4("model", transform);
-        self.shader_program.?.setFloat3("sprite_color", color.r, color.g, color.b);
-
-        // Bind the VAO
-        self.vertex_array.?.bind();
         
-        RendererGl.drawIndexed(6);
 
+        const x = position.x();
+        const y = position.y();
+        const z = position.z();
+        const w = size.x();
+        const h = size.y();
+        //const d = size.z();
+        const r = color.r;
+        const g = color.g;
+        const b = color.b;
+        const a = color.a;
+
+
+        //self.index_count += 6;
+        // Bottom Left 
+        self.quad_vertex_ptr[0].x = x; 
+        self.quad_vertex_ptr[0].y = y; 
+        self.quad_vertex_ptr[0].z = z;
+        self.quad_vertex_ptr[0].r = r;
+        self.quad_vertex_ptr[0].g = g;
+        self.quad_vertex_ptr[0].b = b;
+        self.quad_vertex_ptr[0].a = a;
+        self.quad_vertex_ptr[0].u = 0.0;
+        self.quad_vertex_ptr[0].v = 0.0;
+
+        self.quad_vertex_ptr += 1;
+        // Bottom Right
+        //try self.quad_vertices.append(Vertex{.x = 1.0, .y = 0.0, .z = 0.0, .u = 1.0, .v = 0.0,});
+        self.quad_vertex_ptr[0].x = x + w; 
+        self.quad_vertex_ptr[0].y = y; 
+        self.quad_vertex_ptr[0].z = z;
+        self.quad_vertex_ptr[0].r = r;
+        self.quad_vertex_ptr[0].g = g;
+        self.quad_vertex_ptr[0].b = b;
+        self.quad_vertex_ptr[0].a = a;
+        self.quad_vertex_ptr[0].u = 1.0;
+        self.quad_vertex_ptr[0].v = 0.0;
+
+        self.quad_vertex_ptr += 1;
+        // Top Right
+        //try self.quad_vertices.append(Vertex{.x = 1.0, .y = 1.0, .z = 0.0, .u = 1.0, .v = 1.0,});
+        self.quad_vertex_ptr[0].x = x + w; 
+        self.quad_vertex_ptr[0].y = y + h; 
+        self.quad_vertex_ptr[0].z = z;
+        self.quad_vertex_ptr[0].r = r;
+        self.quad_vertex_ptr[0].g = g;
+        self.quad_vertex_ptr[0].b = b;
+        self.quad_vertex_ptr[0].a = a;
+        self.quad_vertex_ptr[0].u = 1.0;
+        self.quad_vertex_ptr[0].v = 1.0;
+
+        self.quad_vertex_ptr += 1;
+        // Top Left
+        //try self.quad_vertices.append(Vertex{.x = 0.0, .y = 1.0, .z = 0.0, .u = 0.0, .v = 1.0,});
+        self.quad_vertex_ptr[0].x = x; 
+        self.quad_vertex_ptr[0].y = y + h; 
+        self.quad_vertex_ptr[0].z = z;
+        self.quad_vertex_ptr[0].r = r;
+        self.quad_vertex_ptr[0].g = g;
+        self.quad_vertex_ptr[0].b = b;
+        self.quad_vertex_ptr[0].a = a;
+        self.quad_vertex_ptr[0].u = 0.0;
+        self.quad_vertex_ptr[0].v = 1.0;
+
+        self.quad_vertex_ptr += 1;
         self.index_count += 6;
 
         FrameStatistics.incrementQuadCount();

@@ -38,6 +38,19 @@
 - Wrapper for window
 
 ## **LOG** ##
+- **[05-31-2021]**
+	- Cont. Batch Rendering
+		- Colored Quads now have okay batching
+		- Before: 
+			- Frame (ms): 1.0334
+			- Draw (ms): 0.9024
+			- Draw Calls: 1093
+			- Quad Count: 1093
+		- After:
+			- Frame (ms): 0.3093
+			- Draw (ms): 0.1884
+			- Draw Calls: 90
+			- Quad Count: 1093
 - **[05-30-2021]**
 	- Looking into batch rendering
 	- Working on batch rendering with colored quads first.
