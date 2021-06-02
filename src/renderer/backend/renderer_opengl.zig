@@ -17,6 +17,7 @@ const Vertex = @import("../vertex.zig").Vertex;
 // ----
 const Color = @import("../../core/color.zig").Color;
 const texture = @import("../texture.zig");
+const TextureGl = @import("texture_opengl.zig").TextureGl;
 const TextureId = texture.TextureId;
 const Sprite = @import("../sprite.zig").Sprite;
 const gly = @import("../font/glyph.zig");
@@ -27,6 +28,7 @@ const PackingMode = @import("../renderer.zig").PackingMode;
 const ByteAlignment = @import("../renderer.zig").ByteAlignment;
 const Camera = @import("../cameras/camera_2d.zig");
 const Matrix4 = @import("../../core/matrix4.zig").Matrix4;
+const Vector4 = @import("../../core/vector4.zig").Vector4;
 const Vector3 = @import("../../core/vector3.zig").Vector3;
 const Vector2 = @import("../../core/vector2.zig").Vector2;
 const fs = @import("../../utils/file_loader.zig");
@@ -77,6 +79,22 @@ const screenbuffer_indices: [6]c_uint = [6]c_uint{
 //     1.0, -1.0,     1.0, 0.0,// Top Left
 //     1.0,  1.0,     1.0, 1.0,// Top Left
 //};
+
+// zig fmt: off
+const QUAD_TEXTURE_UV: [4]Vector2 = [4]Vector2 {
+    Vector2.new(0.0, 0.0), // BL
+    Vector2.new(1.0, 0.0), // BR
+    Vector2.new(1.0, 1.0), // TR
+    Vector2.new(0.0, 1.0), // TL
+};
+
+// zig fmt: off
+const QUAD_VERTEX_POSITIONS: [4]Vector3 = [4]Vector3 {
+    Vector3.new(0.0, 0.0, 0.0), // BL
+    Vector3.new(1.0, 0.0, 0.0), // BR
+    Vector3.new(1.0, 1.0, 0.0), // TR
+    Vector3.new(0.0, 1.0, 0.0), // TL
+};
 
 // -----------------------------------------
 //      - OpenGL Reference Material -
@@ -132,6 +150,9 @@ const MAX_QUADS = 10000;
 const MAX_VERTICES = MAX_QUADS * 4;
 /// Maximum amount of indices used per draw call
 const MAX_INDICES = MAX_QUADS * 6;
+/// Maximum amount of texture that can be bound per
+/// draw call
+const MAX_TEXTURE_SLOTS = 32;
 
 // -----------------------------------------
 //      - RendererGl -
@@ -149,6 +170,10 @@ pub const RendererGl = struct {
     /// GUI program for drawing on the GUI layer for non-font rendering draws
     gui_renderer_program: ?*ShaderProgramGl = undefined,
 
+    current_program: *ShaderProgramGl = undefined,
+    current_vertex_array: *VertexArrayGl = undefined,
+    current_vertex_buffer: *VertexBufferGl = undefined,
+
     vertex_array: ?*VertexArrayGl = undefined,
     vertex_buffer: ?*VertexBufferGl = undefined,
     index_buffer: ?*IndexBufferGl = undefined,
@@ -159,6 +184,7 @@ pub const RendererGl = struct {
 
     font_renderer_vertex_array: ?*VertexArrayGl = undefined,
     font_renderer_vertex_buffer: ?*VertexBufferGl = undefined,
+    font_renderer_index_buffer: ?*IndexBufferGl = undefined,
 
     gui_renderer_vertex_array: ?*VertexArrayGl = undefined,
     gui_renderer_vertex_buffer: ?*VertexBufferGl = undefined,
@@ -179,6 +205,10 @@ pub const RendererGl = struct {
 
     index_count: u32 = 0,
     vertex_count: u32 = 0,
+
+    //texture_slots: std.ArrayHashMap(c_uint, void) = undefined,
+    texture_slots: []c_uint = undefined,
+    texture_slot_index: u32 = 1,
 
     screenbuffer_vertices: std.ArrayList(Vertex) = undefined,
 
@@ -201,6 +231,11 @@ pub const RendererGl = struct {
 
         self.index_count = 0;
         
+        //self.texture_slots = std.ArrayHashMap(c_uint, void).init(allocator);
+        //self.texture_slots.ensureCapacity(MAX_TEXTURE_SLOTS);
+        self.texture_slots = try allocator.alloc(c_uint, MAX_TEXTURE_SLOTS);
+        self.texture_slot_index = 1;
+
         // -------------------
         
         // Set up the screenbuffer vertices
@@ -210,24 +245,28 @@ pub const RendererGl = struct {
             .x = 1.0, .y = 1.0, .z = 0.0, 
             .r = 1.0, .g = 1.0, .b = 1.0, .a = 1.0,
             .u = 1.0, .v = 1.0,
+            .index = 0.0,
         });
         // Bottom Left 
         try self.screenbuffer_vertices.append(Vertex{
             .x = -1.0, .y = 1.0, .z = 0.0, 
             .r = 1.0, .g = 1.0, .b = 1.0, .a = 1.0,
             .u = 0.0, .v = 1.0,
+            .index = 0.0,
         });
         // Bottom Right
         try self.screenbuffer_vertices.append(Vertex{
             .x = -1.0, .y = -1.0, .z = 0.0, 
             .r = 1.0, .g = 1.0, .b = 1.0, .a = 1.0,
             .u = 0.0, .v = 0.0,
+            .index = 0.0,
         });
         // Top Right
         try self.screenbuffer_vertices.append(Vertex{
             .x = 1.0, .y = -1.0, .z = 0.0, 
             .r = 1.0, .g = 1.0, .b = 1.0, .a = 1.0,
             .u = 1.0, .v = 0.0,
+            .index = 0.0,
         });
 
         // -------------------
@@ -374,6 +413,7 @@ pub const RendererGl = struct {
         // --
         self.font_renderer_vertex_array = try VertexArrayGl.new(allocator);
         self.font_renderer_vertex_buffer = try VertexBufferGl.new(allocator);
+        self.font_renderer_index_buffer = try IndexBufferGl.new(allocator);
         // --
         self.gui_renderer_vertex_array = try VertexArrayGl.new(allocator);
         self.gui_renderer_vertex_buffer = try VertexBufferGl.new(allocator);
@@ -417,18 +457,22 @@ pub const RendererGl = struct {
         self.index_buffer.?.data(indicies_slice, BufferUsageGl.StaticDraw);
 
         //const size_of_vatb = 5;
+        const size_f32 = @sizeOf(f32);
         const stride = @intCast(c_longlong, @sizeOf(Vertex));
         //const stride = @intCast(c_longlong, @sizeOf(f32) * size_of_vatb);
         const offset_position: u32 = 0;
-        const offset_color: u32 = 3 * @sizeOf(f32);
-        const offset_tex: u32 =  7 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
+        const offset_color: u32 = 3 * size_f32;
+        const offset_tex: u32 =  7 * size_f32; // position offset(0)  + the length of the color bytes
+        const offset_index: u32 = 9 * size_f32;
         //const offset_tex: u32 =  3 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
         const index_zero: c_int = 0;
         const index_one: c_int = 1;
         const index_two: c_int = 2;
+        const index_three: c_int = 3;
         const size_position: c_uint = 3;
         const size_color: c_uint = 4;
         const size_tex_coords: c_uint = 2;
+        const size_index: c_uint = 1;
 
         // Tells OpenGL how to interpret the vertex data(per vertex attribute)
         // Uses the data to the currently bound VBO
@@ -446,7 +490,7 @@ pub const RendererGl = struct {
         // Vertex Attributes are disabled by default, we need to enable them.
         c.glEnableVertexAttribArray(index_zero);
 
-        // Texture Coordinates Attribute
+        // Color Attribute
         c.glVertexAttribPointer(
             index_one, // Which vertex attribute we want to configure
             size_color, // Size of vertex attribute (vec2 in this case)
@@ -472,6 +516,19 @@ pub const RendererGl = struct {
 
         // Enable Texture Coordinate Attribute
         c.glEnableVertexAttribArray(index_two);
+            
+        // Texture Index Attribute
+        c.glVertexAttribPointer(
+            index_three, // Which vertex attribute we want to configure
+            size_index, // Size of vertex attribute (vec2 in this case)
+            c.GL_FLOAT, // Type of data
+            c.GL_FALSE, // Should the data be normalized?
+            stride, // Stride
+            @intToPtr(?*c_void, offset_index), // Offset
+        );
+
+        // Enable Texture Coordinate Attribute
+        c.glEnableVertexAttribArray(index_three);
 
         // Unbind the VBO
         c.glBindBuffer(c.GL_ARRAY_BUFFER, index_zero);
@@ -495,10 +552,11 @@ pub const RendererGl = struct {
 
 
         //const screenbuffer_stride = @intCast(c_longlong, @sizeOf(f32) * 4);
-        const screenbuffer_stride = @intCast(c_longlong, @sizeOf(Vertex));
         //const screenbuffer_offset_tex: u32 =  2 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
-        const screenbuffer_offset_color: u32 = 3 * @sizeOf(f32);
-        const screenbuffer_offset_tex: u32 =  7 * @sizeOf(f32); // position offset(0)  + the length of the color bytes
+        const screenbuffer_stride = @intCast(c_longlong, @sizeOf(Vertex));
+        const screenbuffer_offset_color: u32 = 3 * size_f32;
+        const screenbuffer_offset_tex: u32 =  7 * size_f32; // position offset(0)  + the length of the color bytes
+        const screenbuffer_offset_index: u32 = 9 * size_f32;
 
         c.glEnableVertexAttribArray(index_zero);
 
@@ -533,6 +591,17 @@ pub const RendererGl = struct {
             @intToPtr(?*c_void, screenbuffer_offset_tex), // Offset
         );
 
+        //c.glEnableVertexAttribArray(index_three);
+
+        //c.glVertexAttribPointer(
+        //    index_three, 
+        //    size_index,
+        //    c.GL_FLOAT,
+        //    c.GL_FALSE,
+        //    screenbuffer_stride,
+        //    @intToPtr(?*c_void, screenbuffer_offset_index), // Offset
+        //);
+
         // Setup framebuffers
         // const screen_buffer_size = Vector2.new(1280, 720);
         const screen_buffer_size = Application.viewportSize();
@@ -552,18 +621,60 @@ pub const RendererGl = struct {
         // ------------------------------------------
         self.font_renderer_vertex_array.?.bind();
         self.font_renderer_vertex_buffer.?.bind();
-        // 6 vertices of 4 floats each
-        self.font_renderer_vertex_buffer.?.dataless(6 * 4, BufferUsageGl.DynamicDraw);
+        self.vertex_buffer.?.dataV(self.quad_vertex_base, BufferUsageGl.DynamicDraw);
+        
+        // Bind IB
+        self.font_renderer_index_buffer.?.bind();
+        self.font_renderer_index_buffer.?.data(indicies_slice, BufferUsageGl.StaticDraw);
+
+        const font_stride = @intCast(c_longlong, @sizeOf(Vertex)); // 3 (pos(3)) + 2(tex(2)) + 4 (color(r, g, b, a)) + 1 (index(float))
 
         c.glEnableVertexAttribArray(index_zero);
-
+        
+        // Position
         c.glVertexAttribPointer(
             index_zero, 
+            3,
+            c.GL_FLOAT,
+            c.GL_FALSE,
+            font_stride,
+            @intToPtr(?*c_void, 0), // Offset
+        );
+
+        c.glEnableVertexAttribArray(index_one);
+
+        // Color
+        c.glVertexAttribPointer(
+            index_one,
             4,
             c.GL_FLOAT,
             c.GL_FALSE,
-            @intCast(c_longlong, @sizeOf(f32) * 4),
-            @intToPtr(?*c_void, 0), // Offset
+            font_stride,
+            @intToPtr(?*c_void, size_f32 * 3),
+        );
+
+        c.glEnableVertexAttribArray(index_two);
+
+        // tex coords
+        c.glVertexAttribPointer(
+            index_two,
+            2,
+            c.GL_FLOAT,
+            c.GL_FALSE,
+            font_stride,
+            @intToPtr(?*c_void, size_f32 * 7),
+        );
+
+        c.glEnableVertexAttribArray(index_three);
+
+        // index
+        c.glVertexAttribPointer(
+            index_three,
+            1,
+            c.GL_FLOAT,
+            c.GL_FALSE,
+            font_stride,
+            @intToPtr(?*c_void, size_f32 * 9),
         );
 
         // Unbind VBO
@@ -605,6 +716,17 @@ pub const RendererGl = struct {
         // TODO(devon): Switch from an actual texture to a dataless on with a width and height of (1,1)
         const default_texture_op = try rh.ResourceHandler.loadTexture("default_texture", "assets/textures/t_default.png");
         self.default_texture = default_texture_op orelse return texture.TextureErrors.FailedToLoad;
+        
+        var samplers = [_]c_int{0} ** MAX_TEXTURE_SLOTS;
+        var sampler_index: usize = 0;
+        while(sampler_index < MAX_TEXTURE_SLOTS) : (sampler_index += 1) {
+            samplers[sampler_index] = @intCast(c_int, sampler_index);
+        }
+        self.shader_program.?.use();
+        self.shader_program.?.setIntArray("texture_slots", samplers[0..], MAX_TEXTURE_SLOTS);
+        self.font_renderer_program.?.use();
+        self.font_renderer_program.?.setIntArray("texture_slots", samplers[0..], MAX_TEXTURE_SLOTS);
+        self.texture_slots[0] = self.default_texture.?.id().id_gl;
 
 
         return self;
@@ -629,6 +751,7 @@ pub const RendererGl = struct {
         // - Font Renderer
         VertexArrayGl.free(allocator, self.font_renderer_vertex_array.?);
         VertexBufferGl.free(allocator, self.font_renderer_vertex_buffer.?);
+        IndexBufferGl.free(allocator, self.font_renderer_index_buffer.?);
         ShaderProgramGl.free(allocator, self.font_renderer_program.?);
 
         // - GUI Renderer
@@ -640,6 +763,8 @@ pub const RendererGl = struct {
         //self.quad_vertices.deinit();
         allocator.free(self.quad_vertex_base);
         self.screenbuffer_vertices.deinit();
+        //self.texture_slots.deinit();
+        allocator.free(self.texture_slots);
         
         allocator.destroy(self);
 
@@ -647,11 +772,7 @@ pub const RendererGl = struct {
     
     /// Setups up the OpenGL specific components for rendering
     pub fn beginRender(self: *Self, camera: *Camera.Camera2d) void {
-        // Reset index count
-        self.index_count = 0;
-        self.quad_vertex_ptr = self.quad_vertex_base.ptr;
-
-        // Bind framebuffer
+       // Bind framebuffer
         self.screenbuffer.?.bind(framebuffa.FramebufferType.Both);
 
         // Clear the background color
@@ -695,6 +816,27 @@ pub const RendererGl = struct {
             1.0, // Far
         ); 
 
+        // Set up the view matrix
+        // const view = Matrix4.fromTranslate(camera_pos).scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
+        var view = Matrix4.fromTranslate(camera_pos).scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
+        
+        self.shader_program.?.use();
+        self.shader_program.?.setMatrix4("projection", projection);
+        self.shader_program.?.setMatrix4("view", view);
+        self.vertex_array.?.bind();
+
+        self.current_program = self.shader_program.?;
+        self.current_vertex_array = self.vertex_array.?;
+        self.current_vertex_buffer = self.vertex_buffer.?;
+
+        self.beginBatch();
+    }
+
+    /// Setups up the OpenGL specific components for rendering
+    pub fn beginGui(self: *Self) void {
+        // Set up projection matrix
+        const viewport_size = Application.viewportSize();
+        const window_size = Application.windowSize();
         const gui_projection = Matrix4.orthographic(
             0, // Left
             window_size.x(), // Right
@@ -703,22 +845,26 @@ pub const RendererGl = struct {
             -1.0, //Near
             1.0, // Far
         ); 
-        // Set up the view matrix
-        // const view = Matrix4.fromTranslate(camera_pos).scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
-        var view = Matrix4.fromTranslate(camera_pos).scale(Vector3.new(camera_zoom, camera_zoom, 0.0));
-        
-        self.font_renderer_program.?.use();
-        self.font_renderer_program.?.setMatrix4("projection", gui_projection);
 
         self.gui_renderer_program.?.use();
         self.gui_renderer_program.?.setMatrix4("projection", gui_projection);
 
-        self.shader_program.?.use();
-        self.shader_program.?.setMatrix4("projection", projection);
-        self.shader_program.?.setMatrix4("view", view);
-        self.vertex_array.?.bind();
-    }
 
+        self.font_renderer_program.?.use();
+        self.font_renderer_program.?.setMatrix4("projection", gui_projection);
+
+        // Bind vao
+        //self.font_renderer_vertex_array.?.bind();
+
+        self.current_program = self.font_renderer_program.?;
+        self.current_vertex_array = self.font_renderer_vertex_array.?;
+        self.current_vertex_buffer = self.font_renderer_vertex_buffer.?;
+
+
+
+        self.beginBatch();
+    }
+    
     /// Handles the framebuffer and clean up for the end of the user-defined render event
     pub fn endRender(self: *Self) void {
 
@@ -728,16 +874,7 @@ pub const RendererGl = struct {
         // i.e.: 320x180 in-game resolution on a 1280x720 
         // window.
         
-        // Upload buffer data
-        // Bind Buffer
-        self.vertex_buffer.?.bind();
-        // Subdata
-        //self.vertex_buffer.?.subdataV(self.quad_vertices.items[0..]);
-        const data_size: u32 = @intCast(u32,
-            @ptrToInt(self.quad_vertex_ptr) - @ptrToInt(self.quad_vertex_base.ptr)
-        );
-        self.vertex_buffer.?.subdataSize(self.quad_vertex_base, data_size);
-        // Flush
+        // Submit to Gl
         self.flush();
 
         // Bind the default frame buffer 
@@ -763,6 +900,13 @@ pub const RendererGl = struct {
         FrameStatistics.incrementQuadCount();
     }
 
+    /// Handles the framebuffer and clean up for the end of the user-defined render event
+    pub fn endGui(self: *Self) void {
+        
+        // Submit to Gl
+        self.flush();
+    }
+
     /// Draws geometry with a index buffer
     pub fn drawIndexed(index_count: u32) void {
         const offset = @intToPtr(?*c_void, 0);
@@ -781,10 +925,47 @@ pub const RendererGl = struct {
  
     /// Submit the render batch to OpenGl
     pub fn flush(self: *Self) void {
+        // If there is nothing queued up to draw, then just leave.
+        if(self.index_count == 0) return;
         
+        // Bind program
+        self.current_program.use();
+
+        // Bind VAO
+        self.current_vertex_array.bind();
+        
+        // Bind VBO
+        self.current_vertex_buffer.bind();
+        
+        // Determine the size of the used portion of the quad vertex array
+        const data_size: u32 = @intCast(u32,
+            @ptrToInt(self.quad_vertex_ptr) - @ptrToInt(self.quad_vertex_base.ptr)
+        );
+
+        // Update the buffer data
+        self.current_vertex_buffer.subdataSize(self.quad_vertex_base, data_size);
+
+        // Bind all the batched textures       
+        var index: c_uint = 0;
+        while(index < self.texture_slot_index) : (index += 1) {
+            TextureGl.bindUnit(index, self.texture_slots[index]);
+        }
+
         RendererGl.drawIndexed(self.index_count);
     }
-
+    
+    /// Performs the required operations to begin batching
+    pub fn beginBatch(self: *Self) void {
+        self.index_count = 0;
+        self.quad_vertex_ptr = self.quad_vertex_base.ptr;
+        self.texture_slot_index = 1;
+    }
+    
+    /// Submits the batch to draw, and begins a new batch.
+    pub fn endBatch(self: *Self) void {
+        self.flush();
+        self.beginBatch();
+    }
        
     /// Sets up renderer to be able to draw a untextured quad.
     pub fn drawQuad(self: *Self, position: Vector3) void {
@@ -834,6 +1015,7 @@ pub const RendererGl = struct {
         self.quad_vertex_ptr[0].a = a;
         self.quad_vertex_ptr[0].u = 0.0;
         self.quad_vertex_ptr[0].v = 0.0;
+        self.quad_vertex_ptr[0].index = 0;
 
         self.quad_vertex_ptr += 1;
         // Bottom Right
@@ -847,6 +1029,7 @@ pub const RendererGl = struct {
         self.quad_vertex_ptr[0].a = a;
         self.quad_vertex_ptr[0].u = 1.0;
         self.quad_vertex_ptr[0].v = 0.0;
+        self.quad_vertex_ptr[0].index = 0;
 
         self.quad_vertex_ptr += 1;
         // Top Right
@@ -860,6 +1043,7 @@ pub const RendererGl = struct {
         self.quad_vertex_ptr[0].a = a;
         self.quad_vertex_ptr[0].u = 1.0;
         self.quad_vertex_ptr[0].v = 1.0;
+        self.quad_vertex_ptr[0].index = 0;
 
         self.quad_vertex_ptr += 1;
         // Top Left
@@ -873,6 +1057,7 @@ pub const RendererGl = struct {
         self.quad_vertex_ptr[0].a = a;
         self.quad_vertex_ptr[0].u = 0.0;
         self.quad_vertex_ptr[0].v = 1.0;
+        self.quad_vertex_ptr[0].index = 0;
 
         self.quad_vertex_ptr += 1;
         self.index_count += 6;
@@ -969,20 +1154,60 @@ pub const RendererGl = struct {
     }
 
     /// Sets up renderer to be able to draw a textured quad.
-    pub fn drawTexturedQuad(self: *Self, id: TextureId, position: Vector3) void {
-         // Bind Texture
-        c.glBindTexture(c.GL_TEXTURE_2D, id.id_gl);
+    pub fn drawTexturedQuad(self: *Self, texture_id: TextureId, position: Vector3, scale: Vector2, color: Color) void {
+
         // Translation * Rotation * Scale
-        const transform = Matrix4.fromTranslate(position);
+        var model = Matrix4.fromTranslate(position);
         
-        self.shader_program.?.setMatrix4("model", transform);
-        self.shader_program.?.setFloat3("sprite_color", self.default_draw_color.r, self.default_draw_color.g, self.default_draw_color.b);
-
-
-        // Bind the VAO
-        self.vertex_array.?.bind();
+        // Scaling
+        const scaling = Vector3.fromVector2(scale, 1.0);
+        model = model.scale(scaling);
         
-        RendererGl.drawIndexed(6);
+        // Check to see if the current batch is full
+        self.checkBatch();
+
+        // Determine if the sprite's texture id has already been
+        // addded to the batch.
+        var texture_index = @intToFloat(f32, self.getTextureSlotIndex(texture_id.id_gl));
+        texture_index = if(texture_index == -1.0) 0.0 else texture_index;
+        
+        // If not, then add it.
+        if (texture_index == 0.0) {
+            texture_index = @intToFloat(f32, self.texture_slot_index);
+            const no_errors = self.addTextureToBatch(texture_id.id_gl);
+            if(no_errors) {
+                self.texture_slot_index += 1;
+            }else {
+                // Submit batch
+            }
+        }
+
+        const r = color.r;
+        const g = color.g;
+        const b = color.b;
+        const a = color.a;
+
+        const vertex_count: usize = 4;
+        var vertex_index: usize = 0;
+
+        while(vertex_index < vertex_count) : (vertex_index += 1) {
+            const position_4 = Vector4.fromVector3(QUAD_VERTEX_POSITIONS[vertex_index], 1.0);
+            const model_position = model.multiplyVec4(position_4);
+            const tex_coords = QUAD_TEXTURE_UV[vertex_index];
+
+            self.quad_vertex_ptr[0].x = model_position.x(); 
+            self.quad_vertex_ptr[0].y = model_position.y(); 
+            self.quad_vertex_ptr[0].z = model_position.z();
+            self.quad_vertex_ptr[0].r = r;
+            self.quad_vertex_ptr[0].g = g;
+            self.quad_vertex_ptr[0].b = b;
+            self.quad_vertex_ptr[0].a = a;
+            self.quad_vertex_ptr[0].u = tex_coords.x();
+            self.quad_vertex_ptr[0].v = tex_coords.y();
+            self.quad_vertex_ptr[0].index = texture_index;
+
+            self.quad_vertex_ptr += 1;
+        }
 
         self.index_count += 6;
 
@@ -991,90 +1216,114 @@ pub const RendererGl = struct {
 
     /// Sets up renderer to be able to draw a Sprite.
     pub fn drawSprite(self: *Self, sprite: *Sprite, position: Vector3) void {
-        const texture_id_op = sprite.textureId();
-        const texture_id = texture_id_op orelse {
-            self.drawQuad(position);
-            return;
-        };
-        const sprite_color = sprite.color();
-        const sprite_flip = sprite.flipH();
-        const sprite_scale = Vector3.fromVector2(sprite.scale(), 1.0);
-        const sprite_size_op = sprite.size();
-        const sprite_size = sprite_size_op orelse return;
-        // In pixels
-        const sprite_origin = sprite.origin();
-        // In degrees
-        const sprite_angle = sprite.angle();
-
-        // Activate Texture slot and bind Texture
-        c.glActiveTexture(c.GL_TEXTURE0);
-        c.glBindTexture(c.GL_TEXTURE_2D, texture_id.id_gl);
 
         // Translation * Rotation * Scale
 
         // Translation
         var model = Matrix4.fromTranslate(position);
 
-        // Rotation
-        const texture_coords_x = sprite_origin.x() / sprite_size.x();
-        const texture_coords_y = sprite_origin.y() / sprite_size.y();
-        const model_to_origin = Vector3.new(
-            texture_coords_x,
-            texture_coords_y,
-            0.0,
-        );
-        
-        const origin_to_model = Vector3.new(
-            -texture_coords_x,
-            -texture_coords_y,
-            0.0,
-        );
+        //// Rotation
+        //const texture_coords_x = sprite_origin.x() / sprite_size.x();
+        //const texture_coords_y = sprite_origin.y() / sprite_size.y();
+        //const model_to_origin = Vector3.new(
+        //    texture_coords_x,
+        //    texture_coords_y,
+        //    0.0,
+        //);
+        //
+        //const origin_to_model = Vector3.new(
+        //    -texture_coords_x,
+        //    -texture_coords_y,
+        //    0.0,
+        //);
 
-        // Translate to the selected origin
-        model = model.translate(model_to_origin);
-        // Perform the rotation
-        model = model.rotate(sprite_angle, Vector3.forward());
-        // Translate back
-        model = model.translate(origin_to_model);
+        //// Translate to the selected origin
+        //model = model.translate(model_to_origin);
+        //// Perform the rotation
+        //model = model.rotate(sprite_angle, Vector3.forward());
+        //// Translate back
+        //model = model.translate(origin_to_model);
 
         // Scaling
-        model = model.scale(sprite_scale);
-
-        self.shader_program.?.setMatrix4("model", model);
-        self.shader_program.?.setVector3("sprite_color", sprite_color.toVector3());
-        self.shader_program.?.setBool("flip_h", sprite_flip);
-
-        // Bind the VAO
-        self.vertex_array.?.bind();
+        const sprite_scale = sprite.scale();
+        const scale = Vector3.fromVector2(sprite.scale(), 1.0);
+        model = model.scale(scale);
         
-        RendererGl.drawIndexed(6);
+        // Determine if the sprite has a texture assigned to it
+        const texture_id_op = sprite.textureId();
+        const texture_id = texture_id_op orelse {
+            self.drawQuad(position);
+            return;
+        };
+    
+        // Check to see if the current batch is full
+        self.checkBatch();
+
+        // Determine if the sprite's texture id has already been
+        // addded to the batch.
+        var texture_index = @intToFloat(f32, self.getTextureSlotIndex(texture_id.id_gl));
+        texture_index = if(texture_index == -1.0) 0.0 else texture_index;
+        
+        // If not, then add it.
+        if (texture_index == 0.0) {
+            texture_index = @intToFloat(f32, self.texture_slot_index);
+            const no_errors = self.addTextureToBatch(texture_id.id_gl);
+            if(no_errors) {
+                self.texture_slot_index += 1;
+            }else {
+                // Submit batch
+            }
+        }
+
+        const color = sprite.color();
+        const size = sprite.size().?;
+        const w = size.x() * scale.x();
+        const h = size.y() * scale.y();
+        const sprite_flip = sprite.flipH();
+        //const d = size.z();
+        const r = color.r;
+        const g = color.g;
+        const b = color.b;
+        const a = color.a;
+
+        const vertex_count: usize = 4;
+        var vertex_index: usize = 0;
+
+        while(vertex_index < vertex_count) : (vertex_index += 1) {
+            const position_4 = Vector4.fromVector3(QUAD_VERTEX_POSITIONS[vertex_index], 1.0);
+            const model_position = model.multiplyVec4(position_4);
+            const tex_coords = QUAD_TEXTURE_UV[vertex_index];
+
+            self.quad_vertex_ptr[0].x = model_position.x(); 
+            self.quad_vertex_ptr[0].y = model_position.y(); 
+            self.quad_vertex_ptr[0].z = model_position.z();
+            self.quad_vertex_ptr[0].r = r;
+            self.quad_vertex_ptr[0].g = g;
+            self.quad_vertex_ptr[0].b = b;
+            self.quad_vertex_ptr[0].a = a;
+            self.quad_vertex_ptr[0].u = if(sprite_flip) 1.0 - tex_coords.x() else tex_coords.x();
+            self.quad_vertex_ptr[0].v = tex_coords.y();
+            self.quad_vertex_ptr[0].index = texture_index;
+
+            self.quad_vertex_ptr += 1;
+        }
 
         self.index_count += 6;
 
         FrameStatistics.incrementQuadCount();
     }
-
+    
     /// Sets up the renderer to be able to draw text
     pub fn drawText(self: *Self, text: []const u8, x: f32, y: f32, scale: f32, color: Color) void {
-        // Clear the currently bound framebuffer
-        //framebuffa.Framebuffer.resetFramebuffer();
-
-        // Use Text Rendering shader program
-        self.font_renderer_program.?.use();
-        
-        // Pass the text color
-        self.font_renderer_program.?.setFloat3("text_color", color.r, color.g, color.b);
-
-        // Activate Texture Slot 0
-        c.glActiveTexture(c.GL_TEXTURE0);
-
-        // Bind vao
-        self.font_renderer_vertex_array.?.bind();
-
         // Loops through and draw
         var text_length = text.len;
         var index: usize = 0;
         var cursor_x = x;
+
+        const r = color.r;
+        const g = color.g;
+        const b = color.b;
+        const a = color.a;
         
         while(index < text_length) : (index += 1) {
             const character: u8 = text[index];
@@ -1082,6 +1331,26 @@ pub const RendererGl = struct {
                 std.debug.print("[Renderer]: Error occurred when retrieving glyph {}! {s}\n", .{character, err});
                 @panic("[Renderer]: Failed to find glyph!");
             };
+
+            self.checkBatch();
+
+            const texture_id = current_glyph.texture().?.id().id_gl;
+
+            // Determine if the sprite's texture id has already been
+            // addded to the batch.
+            var texture_index = @intToFloat(f32, self.getTextureSlotIndex(texture_id));
+            texture_index = if(texture_index == -1.0) 0.0 else texture_index;
+            
+            // If not, then add it.
+            if (texture_index == 0.0) {
+                texture_index = @intToFloat(f32, self.texture_slot_index);
+                const no_errors = self.addTextureToBatch(texture_id);
+                if(no_errors) {
+                    self.texture_slot_index += 1;
+                }else {
+                    // Submit batch
+                }
+            }
 
             const offset = current_glyph.offset();
             const glyph_width = @intToFloat(f32, current_glyph.width());
@@ -1091,45 +1360,114 @@ pub const RendererGl = struct {
             const advance = current_glyph.advance();
             const width = glyph_width * scale;
             const height = glyph_rows * scale;
-            
-            //zig fmt: off
-            const vertices: [24]f32 = [24]f32 {
-            //  Position                            Texture Coords
-                x_pos,          y_pos + height,         0.0, 0.0,
-                x_pos,          y_pos,                  0.0, 1.0,
-                x_pos + width,  y_pos,                  1.0, 1.0,
 
-                x_pos,          y_pos + height,         0.0, 0.0,
-                x_pos + width,  y_pos,                  1.0, 1.0,
-                x_pos + width,  y_pos + height,         1.0, 0.0,
-            };
+            const vertex_count: usize = 4;
+            var vertex_index: usize = 0;
 
-            const vertices_slice = vertices[0..];
+            while(vertex_index < vertex_count) : (vertex_index += 1) {
+                const v_position = QUAD_VERTEX_POSITIONS[vertex_index];
+                const tex_coords = QUAD_TEXTURE_UV[vertex_index];
+                const vx = v_position.x();
+                const vy = v_position.y();
+                const vz = v_position.z();
 
-            // Bind Texture
-            c.glBindTexture(c.GL_TEXTURE_2D, current_glyph.texture().?.id().id_gl);
+                const vu = tex_coords.x();
+                const vv = tex_coords.y();
 
-            // Update VBO
-            self.font_renderer_vertex_buffer.?.bind();
-            self.font_renderer_vertex_buffer.?.subdata(vertices_slice);
-            VertexBufferGl.clearBoundVertexBuffer();
+                self.quad_vertex_ptr[0].x = if(vx == 0.0) x_pos else x_pos + width; 
+                self.quad_vertex_ptr[0].y = if(vy == 0.0) y_pos else y_pos + height; 
+                self.quad_vertex_ptr[0].z = vz;
+                self.quad_vertex_ptr[0].r = r;
+                self.quad_vertex_ptr[0].g = g;
+                self.quad_vertex_ptr[0].b = b;
+                self.quad_vertex_ptr[0].a = a;
+                self.quad_vertex_ptr[0].u = vu;
+                self.quad_vertex_ptr[0].v = if(vv == 0.0) 1.0 else 0.0;
+                self.quad_vertex_ptr[0].index = texture_index;
 
-            // Draw
-            c.glDrawArrays(c.GL_TRIANGLES, 0, 6);
-            
+                self.quad_vertex_ptr += 1;
+            }
+
             const shifted = @intToFloat(f32, (advance >> 6)) * scale;
+
             // Advance the cursor
             cursor_x += shifted;
 
+            self.index_count += 6;
+
             FrameStatistics.incrementQuadCount();
-            FrameStatistics.incrementDrawCall();
         }
 
-        // Clear the bound vao and texture
-        VertexArrayGl.clearBoundVertexArray();
-        clearBoundTexture();
        
     }
+
+    /// Sets up the renderer to be able to draw text
+    //pub fn drawText(self: *Self, text: []const u8, x: f32, y: f32, scale: f32, color: Color) void {
+    //    // Use Text Rendering shader program
+    //    self.font_renderer_program.?.use();
+
+    //    // Bind vao
+    //    self.font_renderer_vertex_array.?.bind();
+
+    //    // Loops through and draw
+    //    var text_length = text.len;
+    //    var index: usize = 0;
+    //    var cursor_x = x;
+    //    
+    //    while(index < text_length) : (index += 1) {
+    //        const character: u8 = text[index];
+    //        const current_glyph = app.default_font.?.glyph(character) catch |err| {
+    //            std.debug.print("[Renderer]: Error occurred when retrieving glyph {}! {s}\n", .{character, err});
+    //            @panic("[Renderer]: Failed to find glyph!");
+    //        };
+
+    //        const offset = current_glyph.offset();
+    //        const glyph_width = @intToFloat(f32, current_glyph.width());
+    //        const glyph_rows = @intToFloat(f32, current_glyph.rows());
+    //        const x_pos = cursor_x + offset.x() * scale;
+    //        const y_pos = y - (glyph_rows - offset.y()) * scale;
+    //        const advance = current_glyph.advance();
+    //        const width = glyph_width * scale;
+    //        const height = glyph_rows * scale;
+    //        
+    //        //zig fmt: off
+    //        const vertices: [24]f32 = [24]f32 {
+    //        //  Position                            Texture Coords
+    //            x_pos,          y_pos + height,         0.0, 0.0,
+    //            x_pos,          y_pos,                  0.0, 1.0,
+    //            x_pos + width,  y_pos,                  1.0, 1.0,
+
+    //            x_pos,          y_pos + height,         0.0, 0.0,
+    //            x_pos + width,  y_pos,                  1.0, 1.0,
+    //            x_pos + width,  y_pos + height,         1.0, 0.0,
+    //        };
+
+    //        const vertices_slice = vertices[0..];
+
+    //        // Bind Texture
+    //        c.glBindTexture(c.GL_TEXTURE_2D, current_glyph.texture().?.id().id_gl);
+
+    //        // Update VBO
+    //        self.font_renderer_vertex_buffer.?.bind();
+    //        self.font_renderer_vertex_buffer.?.subdata(vertices_slice);
+    //        VertexBufferGl.clearBoundVertexBuffer();
+
+    //        // Draw
+    //        c.glDrawArrays(c.GL_TRIANGLES, 0, 6);
+    //        
+    //        const shifted = @intToFloat(f32, (advance >> 6)) * scale;
+    //        // Advance the cursor
+    //        cursor_x += shifted;
+
+    //        FrameStatistics.incrementQuadCount();
+    //        FrameStatistics.incrementDrawCall();
+    //    }
+
+    //    // Clear the bound vao and texture
+    //    VertexArrayGl.clearBoundVertexArray();
+    //    clearBoundTexture();
+    //   
+    //}
 
     /// Changes to clear color
     pub fn changeClearColor(self: *Self, color: Color) void {
@@ -1168,7 +1506,61 @@ pub const RendererGl = struct {
     pub fn clearBoundTexture() void {
         c.glBindTexture(c.GL_TEXTURE_2D, 0);
     }
+    
+    // Batch-related functions/methods
+    // -----------------------------------
 
+    /// Adds a texture to the texture batch, if the unique texture ID
+    /// was not already added into the set.
+    /// Returns true if no errors occurred.
+    pub fn addTextureToBatch(self: *Self, id: c_uint) bool {
+        if(self.texture_slot_index >= MAX_TEXTURE_SLOTS) return false;
+        self.texture_slots[self.texture_slot_index] = id;
+        return true;
+    }
+
+    /// Returns whether or not the texture_slots is already at maximum capacity
+    /// Returns true if the batch is already at MAX_TEXTURE_SLOTS.
+    /// Otherwise, false.
+    pub fn checkTextureSlots(self: *Self) bool {
+        if(self.texture_slots.len >= MAX_TEXTURE_SLOTS) return true;
+        return false;
+    }
+
+    /// Returns whether or not the passed `id` is already
+    /// in the texture slot set.
+    pub fn containsTextureId(self: *Self, id: c_uint) bool {
+        for(self.texture_slots) | slot_id | {
+            if(slot_id == id) return true;
+        }
+
+        return false;
+    }
+
+    /// Returns the index of the texture id, if found in the 
+    /// set. Otherwise, it'll return -1.
+    pub fn getTextureSlotIndex(self: *Self, id: c_uint) i8 {
+        var index: i8 = -1;
+        var counter: usize = 0;
+        while(counter < self.texture_slot_index) : (counter += 1) {
+            if(self.texture_slots[counter] == id) {
+                index = @intCast(i8, counter);
+                break;
+            }
+        }
+
+        return index;
+    }
+
+    /// Checks to see if the batch maximum bounds have
+    /// already been reached, if so, then the old batch
+    /// will be submitted for render, and a new batch will
+    /// begin.
+    pub fn checkBatch(self: *Self) void {
+        if(self.index_count >= MAX_INDICES or self.texture_slot_index >= MAX_TEXTURE_SLOTS) self.endBatch();
+    }
+
+    // -----------------------------------
     
 };
 

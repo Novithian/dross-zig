@@ -14,6 +14,7 @@ const Color = @import("../core/color.zig").Color;
 const Camera = @import("../renderer/cameras/camera_2d.zig");
 const Matrix4 = @import("../core/matrix4.zig").Matrix4;
 const Vector3 = @import("../core/vector3.zig").Vector3;
+const Vector2 = @import("../core/vector2.zig").Vector2;
 const FrameStatistics = @import("../utils/profiling/frame_statistics.zig").FrameStatistics;
 const String = @import("../utils/strings.zig");
 // -----------------------------------------------------------------------------
@@ -107,7 +108,7 @@ pub const Renderer = struct {
     /// Comments: INTERNAL use only.
     pub fn render(render_loop: fn () anyerror!void, gui_render_loop: fn () anyerror!void) void {
         var camera = Camera.currentCamera();
-        // Prepare for the user defined render
+        // Prepare for the user defined render loop
         Renderer.beginRender(camera.?);
 
         // Call user-defined render
@@ -119,6 +120,9 @@ pub const Renderer = struct {
         // Submit the framebuffer to be renderered
         Renderer.endRender();
 
+        // Prepare the user-defined gui render loop
+        Renderer.beginGui();
+
         // Call user-defined gui render
         _ = gui_render_loop() catch |err| {
             std.debug.print("[Renderer]: Render event encountered an error! {s}\n", .{err});
@@ -126,7 +130,10 @@ pub const Renderer = struct {
         };
 
         // Profiling stats
-        if (!app.debug_mode) return;
+        if (!app.debug_mode) {
+            Renderer.endGui();
+            return;
+        }
 
         const window_size = Application.windowSize();
         const string_height = 30.0;
@@ -139,7 +146,7 @@ pub const Renderer = struct {
         background_color.a = background_opacity;
 
         // Draw background window
-        Renderer.drawColoredQuadGui(Vector3.new(0.0, window_size_y - background_size.y(), 0.0), background_size, background_color);
+        //Renderer.drawColoredQuadGui(Vector3.new(0.0, window_size_y - background_size.y(), 0.0), background_size, background_color);
 
         // Populate Stats
         const frame_time: f64 = FrameStatistics.frameTime();
@@ -158,18 +165,6 @@ pub const Renderer = struct {
         var update_time_string = String.format(&update_time_buffer, "User Update (ms): {d:5}", .{update_time});
         var draw_time_string = String.format(&draw_time_buffer, "Draw (ms): {d:6}", .{draw_time});
 
-        // TODO(devon): REMOVE AFTER OPTIMIZING FONT RENDERING TO BATCHED CALLS
-        draw_calls += @intCast(i64, frame_time_string.len);
-        draw_calls += @intCast(i64, update_time_string.len);
-        draw_calls += @intCast(i64, draw_time_string.len);
-        draw_calls += @intCast(i64, 14);
-        draw_calls += @intCast(i64, 14);
-        quad_count += @intCast(i64, frame_time_string.len);
-        quad_count += @intCast(i64, update_time_string.len);
-        quad_count += @intCast(i64, draw_time_string.len);
-        quad_count += @intCast(i64, 14);
-        quad_count += @intCast(i64, 14);
-
         var draw_calls_string = String.format(&draw_calls_buffer, "Draw Calls: {}", .{draw_calls});
         var quad_count_string = String.format(&quad_count_buffer, "Quad Count: {}", .{quad_count});
 
@@ -179,6 +174,9 @@ pub const Renderer = struct {
         Renderer.drawText(draw_time_string, left_padding, window_size_y - top_padding - (string_height * 3.0), 1.0, Color.white());
         Renderer.drawText(draw_calls_string, left_padding, window_size_y - top_padding - (string_height * 4.0), 1.0, Color.white());
         Renderer.drawText(quad_count_string, left_padding, window_size_y - top_padding - (string_height * 5.0), 1.0, Color.white());
+
+        // Submit the gui to be renderered
+        Renderer.endGui();
     }
 
     /// Flags and sets up for the start of the user-defined render event
@@ -193,12 +191,36 @@ pub const Renderer = struct {
         }
     }
 
+    /// Flags and sets up for the start of the user-defined gui event
+    /// Comments: INTERNAL use only.
+    pub fn beginGui() void {
+        switch (api) {
+            BackendApi.OpenGl => {
+                renderer.gl_backend.?.beginGui();
+            },
+            BackendApi.Dx12 => {},
+            BackendApi.Vulkan => {},
+        }
+    }
+
     /// Handles the clean up for the end of the user-defined render event
     /// Comments: INTERNAL use only.
     pub fn endRender() void {
         switch (api) {
             BackendApi.OpenGl => {
                 renderer.gl_backend.?.endRender();
+            },
+            BackendApi.Dx12 => {},
+            BackendApi.Vulkan => {},
+        }
+    }
+
+    /// Handles the clean up for the end of the user-defined gui event
+    /// Comments: INTERNAL use only.
+    pub fn endGui() void {
+        switch (api) {
+            BackendApi.OpenGl => {
+                renderer.gl_backend.?.endGui();
             },
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},
@@ -249,10 +271,10 @@ pub const Renderer = struct {
     }
 
     /// Sets up renderer to be able to draw a textured quad.
-    pub fn drawTexturedQuad(id: TextureId, position: Vector3) void {
+    pub fn drawTexturedQuad(texture_id: TextureId, position: Vector3, scale: Vector2, color: Color) void {
         switch (api) {
             BackendApi.OpenGl => {
-                renderer.gl_backend.?.drawTexturedQuad(id, position);
+                renderer.gl_backend.?.drawTexturedQuad(texture_id, position, scale, color);
             },
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},

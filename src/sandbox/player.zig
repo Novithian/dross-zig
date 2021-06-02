@@ -59,5 +59,6 @@ pub const Player = struct {
     /// Rendering event
     pub fn render(self: *Self) void {
         Renderer.drawSprite(self.sprite.?, self.position);
+        //Renderer.drawTexturedQuad(self.sprite.?.textureId().?, self.position, self.sprite.?.scale(), self.sprite.?.color());
     }
 };

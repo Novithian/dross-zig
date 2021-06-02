@@ -3,6 +3,7 @@ pub usingnamespace @import("core/input.zig");
 pub usingnamespace @import("core/matrix4.zig");
 pub usingnamespace @import("core/vector2.zig");
 pub usingnamespace @import("core/vector3.zig");
+pub usingnamespace @import("core/vector4.zig");
 pub usingnamespace @import("core/color.zig");
 pub usingnamespace @import("core/resource_handler.zig");
 pub usingnamespace @import("renderer/texture.zig");

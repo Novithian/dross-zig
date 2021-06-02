@@ -191,6 +191,11 @@ pub const TextureGl = struct {
         c.glBindTexture(c.GL_TEXTURE_2D, self.internal_id);
     }
 
+    /// Binds the texture
+    pub fn bindUnit(slot_index: c_uint, external_id: c_uint) void {
+        c.glBindTextureUnit(slot_index, external_id);
+    }
+
     /// Returns the OpenGL generated texture id
     pub fn id(self: *Self) c_uint {
         if (self.internal_id == 0) @panic("[Renderer][OpenGL]: Texture ID of 0 is NOT valid!");

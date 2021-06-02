@@ -22,4 +22,6 @@ pub const Vertex = packed struct {
     /// Texture coordinate
     u: f32,
     v: f32,
+    // Texture index
+    index: f32,
 };

@@ -80,6 +80,14 @@ pub const ShaderProgramGl = struct {
         c.glUniform1i(uniform_location, int_value);
     }
 
+    /// Sets a uniform integer of `name` to the requested `value`
+    pub fn setIntArray(self: *Self, name: [*c]const u8, values: []c_int, count: u32) void {
+        const uniform_location = c.glGetUniformLocation(self.handle, name);
+        //const int_value: c_uint = @intCast(c_uint, values);
+        const count_c: c_int = @intCast(c_int, count);
+        c.glUniform1iv(uniform_location, count_c, @ptrCast(*const c_int, &values[0]));
+    }
+
     /// Sets a uniform float of `name` to the requested `value`
     pub fn setFloat(self: *Self, name: [*c]const u8, value: f32) void {
         const uniform_location = c.glGetUniformLocation(self.handle, name);

@@ -5,6 +5,7 @@ const Vec4 = za.vec4;
 const Mat4 = za.mat4;
 // dross-zig
 const Vector3 = @import("vector3.zig").Vector3;
+const Vector4 = @import("vector4.zig").Vector4;
 
 // -----------------------------------------
 //      - Matrix4 -
@@ -48,8 +49,10 @@ pub const Matrix4 = struct {
     }
 
     /// Multiplies the matrix by a Vector4(f32) and returns the resulting Vector4(f32)
-    pub fn multiplyVec4(self: Self, v: Vec4) Vec4 {
-        return self.data.mult_by_vec4(v);
+    pub fn multiplyVec4(self: Self, v: Vector4) Vector4 {
+        return .{
+            .data = self.data.mult_by_vec4(v.data),
+        };
     }
 
     /// Builds a 4x4 translation matrix by multiplying an

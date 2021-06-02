@@ -5,16 +5,12 @@
 ## **TODO** ##
 
 ### Bugs ###
-- 
 
 ### General ###
-- Wrapper for zalgebra vec4
 
 ### Renderer ###
-- Batch Rendering
 - Font Rendering
-	- Re-iterate to force an entire text render to a single draw call.
-	- Combined to only use a single texture bind
+	- Dynamically generate font atlas and store the uvs in the glyphs
 - Pixel snap
 
 ### Texture ###
@@ -38,6 +34,13 @@
 - Wrapper for window
 
 ## **LOG** ##
+- **[06-01-2021]**
+	- Finished up basic texture batching for sprites
+	- Wrapper for zalgebra vec4
+	- Batch boundary catches	 
+	- Finished basic batching for font rendering
+	- Have a seperate beginGui, endGui
+	- Fixed the bug with drawColoredQuad where it did not use the default texture in slot 0, so it was using random textures in the slots.
 - **[05-31-2021]**
 	- Cont. Batch Rendering
 		- Colored Quads now have okay batching
