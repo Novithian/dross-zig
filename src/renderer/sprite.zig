@@ -6,13 +6,14 @@ const Vector2 = @import("../core/vector2.zig").Vector2;
 const tx = @import("texture.zig");
 const TextureId = tx.TextureId;
 const Texture = tx.Texture;
+const TextureRegion = @import("texture_region.zig").TextureRegion;
 const rh = @import("../core/resource_handler.zig");
 
 // -----------------------------------------
 //      - Sprite -
 // -----------------------------------------
 pub const Sprite = struct {
-    internal_texture: ?*Texture = undefined,
+    internal_texture_region: ?*TextureRegion = undefined,
     internal_color: Color = undefined,
     /// The point of rotation on the sprite in pixels.
     internal_origin: Vector2 = undefined,
@@ -25,13 +26,27 @@ pub const Sprite = struct {
     /// Allocates and builds a Sprite
     /// Comments: The allocated Sprite will be owned by the caller, but the 
     /// allocated Texture is owned by the Resource Handler.
-    pub fn new(allocator: *std.mem.Allocator, texture_name: []const u8, texture_path: []const u8) !*Self {
+    pub fn new(
+        allocator: *std.mem.Allocator,
+        texture_name: []const u8,
+        texture_path: []const u8,
+        atlas_coordinates: Vector2,
+        texture_region_size: Vector2,
+        number_of_cells: Vector2,
+    ) !*Self {
         var self = try allocator.create(Sprite);
 
         const texture_op = try rh.ResourceHandler.loadTexture(texture_name, texture_path);
-        self.internal_texture = texture_op orelse return tx.TextureErrors.FailedToLoad;
+        const texture_atlas = texture_op orelse return tx.TextureErrors.FailedToLoad;
+        self.internal_texture_region = try TextureRegion.new(
+            allocator,
+            texture_atlas,
+            atlas_coordinates,
+            texture_region_size,
+            number_of_cells,
+        );
 
-        const texture_size = self.internal_texture.?.size();
+        //const texture_size = self.internal_texture.?.size();
         self.internal_color = Color.rgba(1.0, 1.0, 1.0, 1.0);
         // self.origin = texture_size.?.scale(0.5);
         self.internal_origin = Vector2.zero();
@@ -49,18 +64,24 @@ pub const Sprite = struct {
         // It wouldn't make sense to unload a texture just because a single
         // Sprite instance was destroyed, unless that is the only reference of
         // the texture.
+        TextureRegion.free(allocator, self.internal_texture_region.?);
         allocator.destroy(self);
+    }
+
+    /// Returns a pointer to the stored TextureRegion
+    pub fn textureRegion(self: *Self) ?*TextureRegion {
+        return self.internal_texture_region;
     }
 
     /// Returns the TextureId of the stored texture
     pub fn textureId(self: *Self) ?TextureId {
-        if (self.internal_texture == undefined) return null;
-        return self.internal_texture.?.id();
+        if (self.internal_texture_region == undefined) return null;
+        return self.internal_texture_region.?.texture().?.id();
     }
 
     /// Sets the Sprites texture
-    pub fn setTexture(self: *Self, new_texture: *Texture) void {
-        self.internal_texture = new_texture;
+    pub fn setTexture(self: *Self, new_texture: *TextureRegion) void {
+        self.internal_texture_region = new_texture;
     }
 
     /// Sets the Sprite color modulation
@@ -85,8 +106,8 @@ pub const Sprite = struct {
 
     /// Returns the size of the Sprite's active texture
     pub fn size(self: *Self) ?Vector2 {
-        if (self.internal_texture == undefined) return null;
-        return self.internal_texture.?.size();
+        if (self.internal_texture_region == undefined) return null;
+        return self.internal_texture_region.?.texture().?.size();
     }
 
     /// Returns the Sprite's origin

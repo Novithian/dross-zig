@@ -852,10 +852,7 @@ pub const RendererGl = struct {
 
         self.font_renderer_program.?.use();
         self.font_renderer_program.?.setMatrix4("projection", gui_projection);
-
-        // Bind vao
-        //self.font_renderer_vertex_array.?.bind();
-
+        
         self.current_program = self.font_renderer_program.?;
         self.current_vertex_array = self.font_renderer_vertex_array.?;
         self.current_vertex_buffer = self.font_renderer_vertex_buffer.?;
@@ -868,12 +865,6 @@ pub const RendererGl = struct {
     /// Handles the framebuffer and clean up for the end of the user-defined render event
     pub fn endRender(self: *Self) void {
 
-        // Batch render the scene (minus the GUI)
-        // GUI will get a seperate batch render to
-        // allow for the game world to use a virtual viewport.
-        // i.e.: 320x180 in-game resolution on a 1280x720 
-        // window.
-        
         // Submit to Gl
         self.flush();
 
@@ -1004,7 +995,6 @@ pub const RendererGl = struct {
         const a = color.a;
 
 
-        //self.index_count += 6;
         // Bottom Left 
         self.quad_vertex_ptr[0].x = x; 
         self.quad_vertex_ptr[0].y = y; 
@@ -1016,10 +1006,9 @@ pub const RendererGl = struct {
         self.quad_vertex_ptr[0].u = 0.0;
         self.quad_vertex_ptr[0].v = 0.0;
         self.quad_vertex_ptr[0].index = 0;
-
         self.quad_vertex_ptr += 1;
+
         // Bottom Right
-        //try self.quad_vertices.append(Vertex{.x = 1.0, .y = 0.0, .z = 0.0, .u = 1.0, .v = 0.0,});
         self.quad_vertex_ptr[0].x = x + w; 
         self.quad_vertex_ptr[0].y = y; 
         self.quad_vertex_ptr[0].z = z;
@@ -1030,10 +1019,9 @@ pub const RendererGl = struct {
         self.quad_vertex_ptr[0].u = 1.0;
         self.quad_vertex_ptr[0].v = 0.0;
         self.quad_vertex_ptr[0].index = 0;
-
         self.quad_vertex_ptr += 1;
+
         // Top Right
-        //try self.quad_vertices.append(Vertex{.x = 1.0, .y = 1.0, .z = 0.0, .u = 1.0, .v = 1.0,});
         self.quad_vertex_ptr[0].x = x + w; 
         self.quad_vertex_ptr[0].y = y + h; 
         self.quad_vertex_ptr[0].z = z;
@@ -1044,10 +1032,9 @@ pub const RendererGl = struct {
         self.quad_vertex_ptr[0].u = 1.0;
         self.quad_vertex_ptr[0].v = 1.0;
         self.quad_vertex_ptr[0].index = 0;
-
         self.quad_vertex_ptr += 1;
+        
         // Top Left
-        //try self.quad_vertices.append(Vertex{.x = 0.0, .y = 1.0, .z = 0.0, .u = 0.0, .v = 1.0,});
         self.quad_vertex_ptr[0].x = x; 
         self.quad_vertex_ptr[0].y = y + h; 
         self.quad_vertex_ptr[0].z = z;
@@ -1058,35 +1045,14 @@ pub const RendererGl = struct {
         self.quad_vertex_ptr[0].u = 0.0;
         self.quad_vertex_ptr[0].v = 1.0;
         self.quad_vertex_ptr[0].index = 0;
-
         self.quad_vertex_ptr += 1;
+        
+        // ---
         self.index_count += 6;
 
         FrameStatistics.incrementQuadCount();
     }
     
-    /// Sets up renderer to be able to draw a untextured quad.
-    //pub fn drawColoredQuad(self: *Self, position: Vector3, size: Vector3, color: Color) void {
-    //    // Bind Texture
-    //    c.glBindTexture(c.GL_TEXTURE_2D, self.default_texture.?.id().id_gl);
-
-    //    // Translation * Rotation * Scale
-    //    var transform = Matrix4.fromTranslate(position);
-    //    transform = transform.scale(size);
-
-    //    self.shader_program.?.setMatrix4("model", transform);
-    //    self.shader_program.?.setFloat3("sprite_color", color.r, color.g, color.b);
-
-    //    // Bind the VAO
-    //    self.vertex_array.?.bind();
-    //    
-    //    RendererGl.drawIndexed(6);
-
-    //    self.index_count += 6;
-
-    //    FrameStatistics.incrementQuadCount();
-    //}
-
     /// Sets up renderer to be able to draw a untextured quad.
     pub fn drawColoredQuadGui(self: *Self, position: Vector3, size: Vector3, color: Color) void {
         // Use Text Rendering shader program
@@ -1108,18 +1074,6 @@ pub const RendererGl = struct {
         const y = position.y();
         const w = size.x();
         const h = size.y();
-
-        //zig fmt: off
-        //const vertices: [24]f32 = [24]f32 {
-        ////  Position                            Texture Coords
-        //    0.0, 0.0,   0.0, 0.0,
-        //    0.0, 1.0,   0.0, 1.0,
-        //    1.0, 1.0,   1.0, 1.0,
-
-        //    0.0, 0.0,   0.0, 0.0,
-        //    1.0, 1.0,   1.0, 1.0,
-        //    1.0, 0.0,   1.0, 0.0,
-        //};
 
         //zig fmt: off
         const vertices: [24]f32 = [24]f32 {
@@ -1146,11 +1100,6 @@ pub const RendererGl = struct {
 
         FrameStatistics.incrementQuadCount();
         FrameStatistics.incrementDrawCall();
-        
-        // Clear the bound vao and texture
-        VertexArrayGl.clearBoundVertexArray();
-        clearBoundTexture();
-       
     }
 
     /// Sets up renderer to be able to draw a textured quad.
@@ -1245,7 +1194,11 @@ pub const RendererGl = struct {
         //model = model.translate(origin_to_model);
 
         // Scaling
+        const size = sprite.size().?;
         const sprite_scale = sprite.scale();
+        const w = size.x() * sprite_scale.x();
+        const h = size.y() * sprite_scale.y();
+        //const scale = Vector3.new(w, h, 1.0);
         const scale = Vector3.fromVector2(sprite.scale(), 1.0);
         model = model.scale(scale);
         
@@ -1255,6 +1208,8 @@ pub const RendererGl = struct {
             self.drawQuad(position);
             return;
         };
+
+        const texture_coordinates = sprite.textureRegion().?.textureCoordinates();
     
         // Check to see if the current batch is full
         self.checkBatch();
@@ -1270,15 +1225,11 @@ pub const RendererGl = struct {
             const no_errors = self.addTextureToBatch(texture_id.id_gl);
             if(no_errors) {
                 self.texture_slot_index += 1;
-            }else {
-                // Submit batch
             }
         }
 
         const color = sprite.color();
-        const size = sprite.size().?;
-        const w = size.x() * scale.x();
-        const h = size.y() * scale.y();
+        
         const sprite_flip = sprite.flipH();
         //const d = size.z();
         const r = color.r;
@@ -1292,7 +1243,8 @@ pub const RendererGl = struct {
         while(vertex_index < vertex_count) : (vertex_index += 1) {
             const position_4 = Vector4.fromVector3(QUAD_VERTEX_POSITIONS[vertex_index], 1.0);
             const model_position = model.multiplyVec4(position_4);
-            const tex_coords = QUAD_TEXTURE_UV[vertex_index];
+            //const tex_coords = QUAD_TEXTURE_UV[vertex_index];
+            const tex_coords = texture_coordinates[vertex_index];
 
             self.quad_vertex_ptr[0].x = model_position.x(); 
             self.quad_vertex_ptr[0].y = model_position.y(); 
@@ -1301,7 +1253,7 @@ pub const RendererGl = struct {
             self.quad_vertex_ptr[0].g = g;
             self.quad_vertex_ptr[0].b = b;
             self.quad_vertex_ptr[0].a = a;
-            self.quad_vertex_ptr[0].u = if(sprite_flip) 1.0 - tex_coords.x() else tex_coords.x();
+            self.quad_vertex_ptr[0].u = tex_coords.x();//if(sprite_flip) 1.0 - tex_coords.x() else tex_coords.x();
             self.quad_vertex_ptr[0].v = tex_coords.y();
             self.quad_vertex_ptr[0].index = texture_index;
 

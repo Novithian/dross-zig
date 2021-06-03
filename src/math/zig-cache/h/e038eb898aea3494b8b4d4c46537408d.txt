@@ -1,0 +1,1 @@
+54307 3096224745024202 1619587300000000000 ea574be0b6bed9e2d057990b8a7c25be C:\Programming\zig-windows-x86_64-0.8.0\lib\zig\libc\mingw\lib64\ntdll.def

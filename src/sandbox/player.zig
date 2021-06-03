@@ -22,7 +22,15 @@ pub const Player = struct {
     pub fn new(allocator: *std.mem.Allocator) !*Self {
         var new_player = try allocator.create(Player);
         new_player.position = Vector3.new(0.0, 1.0, 0.0);
-        new_player.sprite = try Sprite.new(allocator, "player_idle", "assets/sprites/s_player.png");
+        //new_player.sprite = try Sprite.new(allocator, "player_idle", "assets/sprites/s_player.png");
+        new_player.sprite = try Sprite.new(
+            allocator,
+            "player_move",
+            "assets/sprites/s_player_move.png",
+            Vector2.new(0.0, 0.0),
+            Vector2.new(16.0, 16.0),
+            Vector2.new(1.0, 1.0),
+        );
         return new_player;
     }
 
@@ -39,6 +47,8 @@ pub const Player = struct {
         const player_direction = self.sprite.?.flipH();
         const input_horizontal = Input.keyPressedValue(DrossKey.KeyD) - Input.keyPressedValue(DrossKey.KeyA);
         const input_vertical = Input.keyPressedValue(DrossKey.KeyW) - Input.keyPressedValue(DrossKey.KeyS);
+        const up = Input.keyReleased(DrossKey.KeyUp);
+        const down = Input.keyReleased(DrossKey.KeyDown);
 
         const target_position = self.position.add( //
             Vector3.new( //
@@ -53,6 +63,18 @@ pub const Player = struct {
             self.sprite.?.setFlipH(false);
         } else if (input_horizontal < 0.0 and !player_direction) {
             self.sprite.?.setFlipH(true);
+        }
+
+        if (up) {
+            const region = self.sprite.?.textureRegion().?;
+            const old_coords = region.atlasCoordinates();
+            region.setAtlasCoordinates(Vector2.new(old_coords.x() + 1.0, old_coords.y()), true);
+        }
+
+        if (down) {
+            const region = self.sprite.?.textureRegion().?;
+            const old_coords = region.atlasCoordinates();
+            region.setAtlasCoordinates(Vector2.new(old_coords.x() - 1.0, old_coords.y()), true);
         }
     }
 

@@ -26,6 +26,7 @@ var indicator_position: Vector3 = undefined;
 
 var quad_sprite_two: *Sprite = undefined;
 var indicator_sprite: *Sprite = undefined;
+var sprite_sheet_example: *Sprite = undefined;
 
 // Colors
 const background_color: Color = .{
@@ -92,8 +93,8 @@ pub fn main() anyerror!u8 {
 
     player = try Player.new(allocator);
 
-    quad_sprite_two = try Sprite.new(allocator, "enemy_01_idle", "assets/sprites/s_enemy_01_idle.png");
-    indicator_sprite = try Sprite.new(allocator, "indicator", "assets/sprites/s_ui_indicator.png");
+    //quad_sprite_two = try Sprite.new(allocator, "enemy_01_idle", "assets/sprites/s_enemy_01_idle.png", Vector2.new(16.0, 16.0));
+    //indicator_sprite = try Sprite.new(allocator, "indicator", "assets/sprites/s_ui_indicator.png", Vector2.new(16.0, 16.0));
 
     //quad_sprite_two.*.setOrigin(Vector2.new(7.0, 14.0));
     //indicator_sprite.*.setOrigin(Vector2.new(8.0, 11.0));
@@ -103,8 +104,8 @@ pub fn main() anyerror!u8 {
     //defer allocator.destroy(indicator_sprite);
 
     defer Player.free(allocator, player);
-    defer Sprite.free(allocator, quad_sprite_two);
-    defer Sprite.free(allocator, indicator_sprite);
+    //defer Sprite.free(allocator, quad_sprite_two);
+    //defer Sprite.free(allocator, indicator_sprite);
 
     quad_position_two = Vector3.new(2.0, 1.0, 1.0);
     indicator_position = Vector3.new(5.0, 5.0, -1.0);
@@ -142,10 +143,10 @@ pub fn update(delta: f64) anyerror!void {
 
     player.update(delta32);
 
-    const quad_old_scale = quad_sprite_two.*.scale();
-    const indicator_old_angle = indicator_sprite.*.angle();
+    //const quad_old_scale = quad_sprite_two.*.scale();
+    //const indicator_old_angle = indicator_sprite.*.angle();
 
-    indicator_sprite.setAngle(indicator_old_angle + rotational_speed);
+    //indicator_sprite.setAngle(indicator_old_angle + rotational_speed);
 
     // const window_size = Application.windowSize();
     // const zoom = camera.*.zoom();
@@ -153,8 +154,8 @@ pub fn update(delta: f64) anyerror!void {
     // const camera_smoothing = 0.075;
 
     // const new_camera_position = Vector3.new(
-    //     lerp(old_camera_position.x(), -quad_position.x(), camera_smoothing),
-    //     lerp(old_camera_position.y(), -quad_position.y(), camera_smoothing),
+    //     Math.lerp(old_camera_position.x(), -quad_position.x(), camera_smoothing),
+    //     Math.lerp(old_camera_position.y(), -quad_position.y(), camera_smoothing),
     //     0.0,
     // );
     // camera.*.setPosition(new_camera_position);
@@ -164,19 +165,19 @@ pub fn update(delta: f64) anyerror!void {
 /// Defines the game-level rendering
 pub fn render() anyerror!void {
     player.render();
-    Renderer.drawSprite(quad_sprite_two, quad_position_two);
-    Renderer.drawSprite(indicator_sprite, indicator_position);
+    //Renderer.drawSprite(quad_sprite_two, quad_position_two);
+    //Renderer.drawSprite(indicator_sprite, indicator_position);
     Renderer.drawColoredQuad(ground_position, ground_scale, ground_color);
     //Renderer.drawColoredQuad(player.position, indentity_scale, ground_color);
     //Renderer.drawColoredQuad(indicator_position, indentity_scale, ground_color);
     //Renderer.drawColoredQuad(quad_position_two, indentity_scale, ground_color);
 
-    var count: usize = random_count;
-    var index: usize = 0;
+    //var count: usize = random_count;
+    //var index: usize = 0;
 
-    while (index < count) : (index += 1) {
-        Renderer.drawColoredQuad(random_positions[index], indentity_scale, random_colors[index]);
-    }
+    //while (index < count) : (index += 1) {
+    //    Renderer.drawColoredQuad(random_positions[index], indentity_scale, random_colors[index]);
+    //}
 }
 
 /// Defines the game-level gui rendering
@@ -193,14 +194,14 @@ pub fn gui_render() anyerror!void {
     //Renderer.drawText(ass_string, 5.0, 5.0 + user_height, 1.0, white);
     //Renderer.drawText(skate_string, 5.0 + ass_width, 5.0 + user_height, 1.0, white);
 
-    const stupid_message: []const u8 = "I want to run a test to see how many textured quads it'll take to slow this down.";
+    //const stupid_message: []const u8 = "I want to run a test to see how many textured quads it'll take to slow this down.";
 
-    const stupid_height = getStringHeight(stupid_message, 1.0);
+    //const stupid_height = getStringHeight(stupid_message, 1.0);
 
-    const count: usize = 20;
-    var index: usize = 0;
+    //const count: usize = 20;
+    //var index: usize = 0;
 
-    while (index < count) : (index += 1) {
-        Renderer.drawText(stupid_message, 5.0, 5.0 + (stupid_height * @intToFloat(f32, index)), 1.0, white);
-    }
+    //while (index < count) : (index += 1) {
+    //    Renderer.drawText(stupid_message, 5.0, 5.0 + (stupid_height * @intToFloat(f32, index)), 1.0, white);
+    //}
 }

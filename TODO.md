@@ -7,18 +7,26 @@
 ### Bugs ###
 
 ### General ###
+- Brainstorm a new name for the project
+- Possibly create a framework wide wrapper for a *, such as Ref(Sprite) to make intentions/ownership clear at a glance.
+- Move Vectorx/matrix4 to a math directory
 
 ### Renderer ###
+- Fix drawColoredQuadGui
 - Font Rendering
 	- Dynamically generate font atlas and store the uvs in the glyphs
 - Pixel snap
 
 ### Texture ###
-- Texture Atlas
 
 ### Sprite ###
 - Sprite origin ( Not really working yet )
 - Sorting Orderer
+- Fix texture flip for the TextureRegion 
+- Fix rotation with the new batch renderer
+
+### Animation System ###
+- Basic implementation
 
 ### Input ###
 - Mouse manage state to detect down
@@ -34,6 +42,12 @@
 - Wrapper for window
 
 ## **LOG** ##
+- **[06-02-2021]**
+	- Texture Region to allow for texture atlas/sprite sheet usage.
+	- Planning out basic implementation of Animation system.
+	- Made an encompassing math.zig for math utilities.
+	- Deleted utils/math_helpers.zig
+	- Added clamp, min, and max math functions.
 - **[06-01-2021]**
 	- Finished up basic texture batching for sprites
 	- Wrapper for zalgebra vec4

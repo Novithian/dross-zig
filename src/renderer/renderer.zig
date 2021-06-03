@@ -165,8 +165,15 @@ pub const Renderer = struct {
         var update_time_string = String.format(&update_time_buffer, "User Update (ms): {d:5}", .{update_time});
         var draw_time_string = String.format(&draw_time_buffer, "Draw (ms): {d:6}", .{draw_time});
 
+        draw_calls += 1;
+        quad_count += @intCast(i64, frame_time_string.len);
+        quad_count += @intCast(i64, update_time_string.len);
+        quad_count += @intCast(i64, draw_time_string.len);
+
         var draw_calls_string = String.format(&draw_calls_buffer, "Draw Calls: {}", .{draw_calls});
+        quad_count += @intCast(i64, draw_calls_string.len);
         var quad_count_string = String.format(&quad_count_buffer, "Quad Count: {}", .{quad_count});
+        quad_count += @intCast(i64, draw_calls_string.len);
 
         // Draw Stats
         Renderer.drawText(frame_time_string, left_padding, window_size_y - top_padding - (string_height * 1.0), 1.0, Color.white());
