@@ -6,8 +6,9 @@ const Vector2 = @import("../core/vector2.zig").Vector2;
 const tx = @import("texture.zig");
 const TextureId = tx.TextureId;
 const Texture = tx.Texture;
+const TextureErrors = tx.TextureErrors;
 const TextureRegion = @import("texture_region.zig").TextureRegion;
-const rh = @import("../core/resource_handler.zig");
+const ResourceHandler = @import("../core/resource_handler.zig").ResourceHandler;
 
 // -----------------------------------------
 //      - Sprite -
@@ -36,8 +37,8 @@ pub const Sprite = struct {
     ) !*Self {
         var self = try allocator.create(Sprite);
 
-        const texture_op = try rh.ResourceHandler.loadTexture(texture_name, texture_path);
-        const texture_atlas = texture_op orelse return tx.TextureErrors.FailedToLoad;
+        const texture_op = try ResourceHandler.loadTexture(texture_name, texture_path);
+        const texture_atlas = texture_op orelse return TextureErrors.FailedToLoad;
         self.internal_texture_region = try TextureRegion.new(
             allocator,
             texture_atlas,

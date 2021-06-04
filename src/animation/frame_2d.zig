@@ -36,6 +36,7 @@ pub const Frame2d = struct {
     /// is not owned by the instance, so it will not need to be freed
     /// as it is only a reference.
     pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+        TextureRegion.free(allocator, self.frame_region.?);
         allocator.destroy(self);
     }
 

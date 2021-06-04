@@ -1,6 +1,7 @@
 // Third Parties
 const c = @import("../../c_global.zig").c_imp;
 const std = @import("std");
+const zigimg = import("zigimg");
 // dross-zig
 const InternalTexture = @import("../texture.zig").InternalTexture;
 const TextureErrors = @import("../texture.zig").TextureErrors;
@@ -25,7 +26,6 @@ pub const TextureGl = struct {
     internal_height: c_int = 0,
     /// The number of channels used in the texture
     internal_channels: c_int = 0,
-    data: []u8,
 
     const Self = @This();
 
@@ -35,7 +35,6 @@ pub const TextureGl = struct {
         var self = try allocator.create(TextureGl);
 
         const number_of_textures: c_int = 1;
-        const desired_channels: c_int = 0;
         const mipmap_level: c_int = 0;
         const border: c_int = 0;
 
@@ -56,7 +55,7 @@ pub const TextureGl = struct {
         c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MAG_FILTER, c.GL_NEAREST);
 
         //var compressed_bytes: []const u8 = @embedFile("../../../assets/sprites/s_guy_idle.png");
-        var compressed_bytes: ?[]const u8 = fs.loadFile(path) catch |err| {
+        var compressed_bytes: ?[]const u8 = fs.loadFile(path, 4 * 1024 * 1024) catch |err| {
             std.debug.print("[Texture]: Failed to load Texture at {s}! {}\n", .{ path, err });
             return err;
         };
@@ -64,7 +63,7 @@ pub const TextureGl = struct {
         const bytes_length: c_int = @intCast(c_int, compressed_bytes.?.len);
 
         // Determine if the file is a png file
-        if (c.stbi_info_from_memory(compressed_bytes.?.ptr, bytes_length, &self.internal_width, &self.internal_height, null) == 0) {
+        if (c.stbi_info_from_memory(compressed_bytes.?.ptr, bytes_length, &self.internal_width, &self.internal_height, &self.internal_channels) == 0) {
             return error.NotPngFile;
         }
 
@@ -81,12 +80,12 @@ pub const TextureGl = struct {
         const width_u32 = @intCast(u32, self.internal_width);
         const height_u32 = @intCast(u32, self.internal_height);
 
-        const image_data = c.stbi_load_from_memory(compressed_bytes.?.ptr, bytes_length, &self.internal_width, &self.internal_height, null, channel_count);
+        const image_data = c.stbi_load_from_memory(compressed_bytes.?.ptr, bytes_length, &self.internal_width, &self.internal_height, &self.internal_channels, channel_count);
 
         if (image_data == null) return error.NoMem;
 
         const pitch = width_u32 * bits_per_channel * channel_count / 8;
-        self.data = image_data[0 .. height_u32 * pitch];
+        var data = image_data[0 .. height_u32 * pitch];
 
         // Generate gl texture
         c.glTexImage2D(
@@ -98,13 +97,13 @@ pub const TextureGl = struct {
             border, // Boarde NOTE(devon): must be 0
             c.GL_RGBA, // Specifies the format of the pixel data
             c.GL_UNSIGNED_BYTE, // Specifies the data type of the pixel data
-            @ptrCast(*c_void, &self.data.ptr[0]), // void pointer to image data
+            @ptrCast(*c_void, &data.ptr[0]), // void pointer to image data
         );
 
         // Generate mipmap
         // c.glGenerateMipmap(c.GL_TEXTURE_2D);
 
-        c.stbi_image_free(self.data.ptr);
+        c.stbi_image_free(data.ptr);
 
         return self;
     }

@@ -9,6 +9,7 @@ const RendererGl = gl.RendererGl;
 const app = @import("../core/application.zig");
 const Application = app.Application;
 const TextureId = @import("texture.zig").TextureId;
+const TextureRegion = @import("texture_region.zig").TextureRegion;
 const Sprite = @import("sprite.zig").Sprite;
 const Color = @import("../core/color.zig").Color;
 const Camera = @import("../renderer/cameras/camera_2d.zig");
@@ -278,10 +279,11 @@ pub const Renderer = struct {
     }
 
     /// Sets up renderer to be able to draw a textured quad.
-    pub fn drawTexturedQuad(texture_id: TextureId, position: Vector3, scale: Vector2, color: Color) void {
+    pub fn drawTexturedQuad(texture_region: *TextureRegion, position: Vector3, scale: Vector2, color: Color, flip_h: bool) void {
+        //pub fn drawTexturedQuad(texture_id: TextureId, position: Vector3, scale: Vector2, color: Color) void {
         switch (api) {
             BackendApi.OpenGl => {
-                renderer.gl_backend.?.drawTexturedQuad(texture_id, position, scale, color);
+                renderer.gl_backend.?.drawTexturedQuad(texture_region, position, scale, color, flip_h);
             },
             BackendApi.Dx12 => {},
             BackendApi.Vulkan => {},

@@ -18,7 +18,7 @@ pub const FileLoaderErrors = error{
 /// Loads a file and returns a slice of the bytes. 
 /// Path is relative to the zig.build/exe.
 /// If an error occurs, it'll return null.
-pub fn loadFile(path: []const u8) !?[]const u8 {
+pub fn loadFile(path: []const u8, comptime buffer_size: usize) !?[]const u8 {
 
     // Get the source file
     const file = try std.fs.cwd().openFile(
@@ -29,7 +29,7 @@ pub fn loadFile(path: []const u8) !?[]const u8 {
     defer file.close();
 
     // Create a buffer to store the file read in
-    var file_buffer: [4096]u8 = undefined;
+    var file_buffer: [buffer_size]u8 = undefined;
 
     try file.seekTo(0);
 

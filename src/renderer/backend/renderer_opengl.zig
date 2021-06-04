@@ -19,6 +19,7 @@ const Color = @import("../../core/color.zig").Color;
 const texture = @import("../texture.zig");
 const TextureGl = @import("texture_opengl.zig").TextureGl;
 const TextureId = texture.TextureId;
+const TextureRegion = @import("../texture_region.zig").TextureRegion;
 const Sprite = @import("../sprite.zig").Sprite;
 const gly = @import("../font/glyph.zig");
 const Glyph = gly.Glyph;
@@ -27,6 +28,7 @@ const Font = font.Font;
 const PackingMode = @import("../renderer.zig").PackingMode;
 const ByteAlignment = @import("../renderer.zig").ByteAlignment;
 const Camera = @import("../cameras/camera_2d.zig");
+const Math = @import("../../math/math.zig").Math;
 const Matrix4 = @import("../../core/matrix4.zig").Matrix4;
 const Vector4 = @import("../../core/vector4.zig").Vector4;
 const Vector3 = @import("../../core/vector3.zig").Vector3;
@@ -1103,15 +1105,82 @@ pub const RendererGl = struct {
     }
 
     /// Sets up renderer to be able to draw a textured quad.
-    pub fn drawTexturedQuad(self: *Self, texture_id: TextureId, position: Vector3, scale: Vector2, color: Color) void {
+    //pub fn drawTexturedQuad(self: *Self, texture_id: TextureId, position: Vector3, scale: Vector2, color: Color) void {
 
+    //    // Translation * Rotation * Scale
+    //    var model = Matrix4.fromTranslate(position);
+    //    
+    //    // Scaling
+    //    const scaling = Vector3.fromVector2(scale, 1.0);
+    //    model = model.scale(scaling);
+    //    
+    //    // Check to see if the current batch is full
+    //    self.checkBatch();
+
+    //    // Determine if the sprite's texture id has already been
+    //    // addded to the batch.
+    //    var texture_index = @intToFloat(f32, self.getTextureSlotIndex(texture_id.id_gl));
+    //    texture_index = if(texture_index == -1.0) 0.0 else texture_index;
+    //    
+    //    // If not, then add it.
+    //    if (texture_index == 0.0) {
+    //        texture_index = @intToFloat(f32, self.texture_slot_index);
+    //        const no_errors = self.addTextureToBatch(texture_id.id_gl);
+    //        if(no_errors) {
+    //            self.texture_slot_index += 1;
+    //        }else {
+    //            // Submit batch
+    //        }
+    //    }
+
+    //    const r = color.r;
+    //    const g = color.g;
+    //    const b = color.b;
+    //    const a = color.a;
+
+    //    const vertex_count: usize = 4;
+    //    var vertex_index: usize = 0;
+
+    //    while(vertex_index < vertex_count) : (vertex_index += 1) {
+    //        const position_4 = Vector4.fromVector3(QUAD_VERTEX_POSITIONS[vertex_index], 1.0);
+    //        const model_position = model.multiplyVec4(position_4);
+    //        const tex_coords = QUAD_TEXTURE_UV[vertex_index];
+
+    //        self.quad_vertex_ptr[0].x = model_position.x(); 
+    //        self.quad_vertex_ptr[0].y = model_position.y(); 
+    //        self.quad_vertex_ptr[0].z = model_position.z();
+    //        self.quad_vertex_ptr[0].r = r;
+    //        self.quad_vertex_ptr[0].g = g;
+    //        self.quad_vertex_ptr[0].b = b;
+    //        self.quad_vertex_ptr[0].a = a;
+    //        self.quad_vertex_ptr[0].u = tex_coords.x();
+    //        self.quad_vertex_ptr[0].v = tex_coords.y();
+    //        self.quad_vertex_ptr[0].index = texture_index;
+
+    //        self.quad_vertex_ptr += 1;
+    //    }
+
+    //    self.index_count += 6;
+
+    //    FrameStatistics.incrementQuadCount();
+    //}
+    
+    /// Queues a textured quad to be drawn
+    pub fn drawTexturedQuad(self: *Self, texture_region: *TextureRegion, position: Vector3, scale: Vector2, color: Color, flip_h: bool) void {
         // Translation * Rotation * Scale
+
+        // Translation
         var model = Matrix4.fromTranslate(position);
-        
+
         // Scaling
-        const scaling = Vector3.fromVector2(scale, 1.0);
-        model = model.scale(scaling);
+        const texture_scale = Vector3.fromVector2(scale, 1.0);
+        model = model.scale(texture_scale);
         
+        // Determine if the sprite has a texture assigned to it
+        const texture_id = texture_region.texture().?.id();
+
+        const texture_coordinates = texture_region.textureCoordinates();
+    
         // Check to see if the current batch is full
         self.checkBatch();
 
@@ -1126,10 +1195,12 @@ pub const RendererGl = struct {
             const no_errors = self.addTextureToBatch(texture_id.id_gl);
             if(no_errors) {
                 self.texture_slot_index += 1;
-            }else {
-                // Submit batch
             }
         }
+
+
+        const uv_min_x = texture_coordinates[0].x();
+        const uv_max_x = texture_coordinates[1].x();
 
         const r = color.r;
         const g = color.g;
@@ -1142,7 +1213,7 @@ pub const RendererGl = struct {
         while(vertex_index < vertex_count) : (vertex_index += 1) {
             const position_4 = Vector4.fromVector3(QUAD_VERTEX_POSITIONS[vertex_index], 1.0);
             const model_position = model.multiplyVec4(position_4);
-            const tex_coords = QUAD_TEXTURE_UV[vertex_index];
+            const tex_coords = texture_coordinates[vertex_index];
 
             self.quad_vertex_ptr[0].x = model_position.x(); 
             self.quad_vertex_ptr[0].y = model_position.y(); 
@@ -1151,7 +1222,7 @@ pub const RendererGl = struct {
             self.quad_vertex_ptr[0].g = g;
             self.quad_vertex_ptr[0].b = b;
             self.quad_vertex_ptr[0].a = a;
-            self.quad_vertex_ptr[0].u = tex_coords.x();
+            self.quad_vertex_ptr[0].u = if(flip_h) uv_min_x + (uv_max_x - tex_coords.x()) else tex_coords.x();
             self.quad_vertex_ptr[0].v = tex_coords.y();
             self.quad_vertex_ptr[0].index = texture_index;
 
@@ -1243,7 +1314,6 @@ pub const RendererGl = struct {
         while(vertex_index < vertex_count) : (vertex_index += 1) {
             const position_4 = Vector4.fromVector3(QUAD_VERTEX_POSITIONS[vertex_index], 1.0);
             const model_position = model.multiplyVec4(position_4);
-            //const tex_coords = QUAD_TEXTURE_UV[vertex_index];
             const tex_coords = texture_coordinates[vertex_index];
 
             self.quad_vertex_ptr[0].x = model_position.x(); 

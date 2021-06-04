@@ -14,7 +14,7 @@ const Vector2 = @import("../core/vector2.zig").Vector2;
 pub const TextureRegion = struct {
     internal_texture: ?*Texture = undefined,
     texture_coordinates: [4]Vector2 = undefined,
-    current_corrdinates: Vector2 = undefined,
+    current_coordinates: Vector2 = undefined,
     region_size: Vector2 = undefined,
     number_of_regions: Vector2 = undefined,
 
@@ -34,7 +34,7 @@ pub const TextureRegion = struct {
 
         self.internal_texture = atlas;
 
-        self.current_corrdinates = coordinates;
+        self.current_coordinates = coordinates;
         self.region_size = region_size;
         self.number_of_regions = number_of_regions;
 
@@ -54,8 +54,8 @@ pub const TextureRegion = struct {
     pub fn calculateTextureCoordinates(self: *Self) void {
         const region_w = self.region_size.x();
         const region_h = self.region_size.y();
-        const coordinate_x = self.current_corrdinates.x();
-        const coordinate_y = self.current_corrdinates.y();
+        const coordinate_x = self.current_coordinates.x();
+        const coordinate_y = self.current_coordinates.y();
         const texture_size = self.internal_texture.?.size();
         const texture_w = texture_size.?.x();
         const texture_h = texture_size.?.y();
@@ -94,7 +94,7 @@ pub const TextureRegion = struct {
         if (new_coordinates.x() * self.region_size.x() >= texture_size.?.x() or
             new_coordinates.y() * self.region_size.y() >= texture_size.?.y()) return;
 
-        self.current_corrdinates = new_coordinates;
+        self.current_coordinates = new_coordinates;
 
         if (recalculate) self.calculateTextureCoordinates();
     }
@@ -111,6 +111,6 @@ pub const TextureRegion = struct {
 
     /// Returns the current Atlas Coordinates
     pub fn atlasCoordinates(self: *Self) Vector2 {
-        return self.current_corrdinates;
+        return self.current_coordinates;
     }
 };

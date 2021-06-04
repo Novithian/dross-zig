@@ -8,7 +8,6 @@
 
 ### General ###
 - Brainstorm a new name for the project
-- Possibly create a framework wide wrapper for a *, such as Ref(Sprite) to make intentions/ownership clear at a glance.
 - Move Vectorx/matrix4 to a math directory
 
 ### Renderer ###
@@ -22,12 +21,9 @@
 ### Sprite ###
 - Sprite origin ( Not really working yet )
 - Sorting Orderer
-- Fix texture flip for the TextureRegion 
 - Fix rotation with the new batch renderer
 
 ### Animation System ###
-- Basic implementation
-
 ### Input ###
 - Mouse manage state to detect down
 
@@ -42,6 +38,12 @@
 - Wrapper for window
 
 ## **LOG** ##
+- **[06-03-2021]**
+	- Basic animation system implemented
+	- Spent hours trying to figure out why my spritesheets would not load properly. Forgot I initially set the file loader buffer to 4096 since I was loading single frame textures.
+	- Allow for file_loader.zig's loadFile to take a buffer size parameter.
+	- Create an animation from a texture atlas automatically.
+	- Fix texture flip for the TextureRegion 
 - **[06-02-2021]**
 	- Texture Region to allow for texture atlas/sprite sheet usage.
 	- Planning out basic implementation of Animation system.

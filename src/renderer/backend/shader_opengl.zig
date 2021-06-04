@@ -55,7 +55,7 @@ pub const ShaderGl = struct {
 
     /// Sources a given GLSL shader file
     pub fn source(self: *Self, path: [:0]const u8) !void {
-        const source_slice = FileLoader.loadFile(path) catch |err| {
+        const source_slice = FileLoader.loadFile(path, 4096) catch |err| {
             std.debug.print("[Shader]: Failed to load shader ({s})! {}\n", .{ path, err });
             return err;
         };
