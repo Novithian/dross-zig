@@ -47,7 +47,7 @@ pub fn build(b: *std.build.Builder) void {
     // FREETYPE
     exe.addIncludeDir("libs/freetype");
     exe.addIncludeDir("libs/freetype/include");
-    exe.linkLibrary(ft2);
+    //exe.linkLibrary(ft2);
     exe.linkSystemLibrary("libs/freetype/x64_win/freetype");
 
     // ZALGEBRA
@@ -59,11 +59,11 @@ pub fn build(b: *std.build.Builder) void {
     exe.linkSystemLibrary("opengl32");
 
     // Copy over the resource code
-    b.installBinFile("src/renderer/shaders/default_shader.vs", "assets/shaders/default_shader.vs");
-    b.installBinFile("src/renderer/shaders/default_shader.fs", "assets/shaders/default_shader.fs");
-    b.installBinFile("src/renderer/shaders/screenbuffer_shader.vs", "assets/shaders/screenbuffer_shader.vs");
-    b.installBinFile("src/renderer/shaders/screenbuffer_shader.fs", "assets/shaders/screenbuffer_shader.fs");
-    b.installBinFile("assets/textures/t_default.png", "assets/textures/t_default.png");
+    //b.installBinFile("src/renderer/shaders/default_shader.vs", "assets/shaders/default_shader.vs");
+    //b.installBinFile("src/renderer/shaders/default_shader.fs", "assets/shaders/default_shader.fs");
+    //b.installBinFile("src/renderer/shaders/screenbuffer_shader.vs", "assets/shaders/screenbuffer_shader.vs");
+    //b.installBinFile("src/renderer/shaders/screenbuffer_shader.fs", "assets/shaders/screenbuffer_shader.fs");
+    //b.installBinFile("assets/textures/t_default.png", "assets/textures/t_default.png");
 
     exe.linkLibC();
 

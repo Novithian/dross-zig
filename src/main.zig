@@ -1,3 +1,4 @@
+// Third-Party
 const std = @import("std");
 // Dross-zig
 const Dross = @import("dross_zig.zig");
@@ -6,7 +7,6 @@ const Player = @import("sandbox/player.zig").Player;
 // -------------------------------------------
 
 // Allocator
-var allocator: *std.mem.Allocator = undefined;
 
 // Application Infomation
 const APP_TITLE = "Dross-Zig Application";
@@ -15,8 +15,11 @@ const APP_WINDOW_HEIGHT = 720;
 const APP_VIEWPORT_WIDTH = 320;
 const APP_VIEWPORT_HEIGHT = 180;
 
-//
+// Application related
 var app: *Application = undefined;
+var allocator: *std.mem.Allocator = undefined;
+
+// Gameplay related
 var camera: *Camera2d = undefined;
 
 var player: *Player = undefined;
@@ -93,22 +96,19 @@ pub fn main() anyerror!u8 {
 
     player = try Player.new(allocator);
 
-    //quad_sprite_two = try Sprite.new(allocator, "enemy_01_idle", "assets/sprites/s_enemy_01_idle.png", Vector2.new(16.0, 16.0));
-    //indicator_sprite = try Sprite.new(allocator, "indicator", "assets/sprites/s_ui_indicator.png", Vector2.new(16.0, 16.0));
+    quad_sprite_two = try Sprite.new(allocator, "enemy_01_idle", "assets/sprites/s_enemy_01_idle.png", Vector2.zero(), Vector2.new(16.0, 16.0), Vector2.new(1.0, 1.0));
+    indicator_sprite = try Sprite.new(allocator, "indicator", "assets/sprites/s_ui_indicator.png", Vector2.zero(), Vector2.new(16.0, 16.0), Vector2.new(1.0, 1.0));
 
     //quad_sprite_two.*.setOrigin(Vector2.new(7.0, 14.0));
     //indicator_sprite.*.setOrigin(Vector2.new(8.0, 11.0));
     //indicator_sprite.*.setAngle(30.0);
 
-    //defer allocator.destroy(quad_sprite_two);
-    //defer allocator.destroy(indicator_sprite);
-
     defer Player.free(allocator, player);
-    //defer Sprite.free(allocator, quad_sprite_two);
-    //defer Sprite.free(allocator, indicator_sprite);
+    defer Sprite.free(allocator, quad_sprite_two);
+    defer Sprite.free(allocator, indicator_sprite);
 
     quad_position_two = Vector3.new(2.0, 1.0, 1.0);
-    indicator_position = Vector3.new(5.0, 5.0, -1.0);
+    indicator_position = Vector3.new(5.0, 1.0, -1.0);
 
     Renderer.changeClearColor(background_color);
 
@@ -165,8 +165,8 @@ pub fn update(delta: f64) anyerror!void {
 /// Defines the game-level rendering
 pub fn render() anyerror!void {
     player.render();
-    //Renderer.drawSprite(quad_sprite_two, quad_position_two);
-    //Renderer.drawSprite(indicator_sprite, indicator_position);
+    Renderer.drawSprite(quad_sprite_two, quad_position_two);
+    Renderer.drawSprite(indicator_sprite, indicator_position);
     Renderer.drawColoredQuad(ground_position, ground_scale, ground_color);
     //Renderer.drawColoredQuad(player.position, indentity_scale, ground_color);
     //Renderer.drawColoredQuad(indicator_position, indentity_scale, ground_color);

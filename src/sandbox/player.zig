@@ -29,39 +29,36 @@ pub const Player = struct {
         new_player.scale = Vector2.new(1.0, 1.0);
         new_player.color = Color.white();
         new_player.flip_h = false;
-        //new_player.sprite = try Sprite.new(allocator, "player_idle", "assets/sprites/s_player.png");
-        //new_player.sprite = try Sprite.new(
-        //    allocator,
-        //    "player_move",
-        //    "assets/sprites/s_player_move.png",
-        //    Vector2.new(0.0, 0.0),
-        //    Vector2.new(16.0, 16.0),
-        //    Vector2.new(1.0, 1.0),
-        //);
 
         new_player.animator = try Animator2d.new(allocator);
 
-        //const texture_op = try ResourceHandler.loadTexture("player_ani", "assets/sprites/s_player_sheet.png");
         const texture_op = try ResourceHandler.loadTexture("player_ani", "assets/sprites/s_player_sheet.png");
         const texture_atlas = texture_op orelse return TextureErrors.FailedToLoad;
 
         var idle_animation: *Animation2d = undefined;
-        //var jump_animation: *Animation2d = undefined;
         var move_animation: *Animation2d = undefined;
-        //var climb_animation: *Animation2d = undefined;
+        var jump_animation: *Animation2d = undefined;
+        var climb_animation: *Animation2d = undefined;
 
         idle_animation = try Animation2d.new(allocator, "idle");
-        //jump_animation = try Animation2d.new(allocator, "jump");
         move_animation = try Animation2d.new(allocator, "move");
-        //climb_animation = try Animation2d.new(allocator, "climb");
+        jump_animation = try Animation2d.new(allocator, "jump");
+        climb_animation = try Animation2d.new(allocator, "climb");
 
         const idle_duration_array = [_]f32{0.25} ** 2;
         const move_duration_array = [_]f32{0.25} ** 4;
+        const jump_duration_array = [_]f32{0.25} ** 1;
+        const climb_duration_array = [_]f32{0.25} ** 4;
+
         const idle_rso_array = [_]Vector2{Vector2.new(1.0, 1.0)} ** 2;
         const move_rso_array = [_]Vector2{Vector2.new(1.0, 1.0)} ** 4;
+        const jump_rso_array = [_]Vector2{Vector2.new(1.0, 1.0)} ** 1;
+        const climb_rso_array = [_]Vector2{Vector2.new(1.0, 1.0)} ** 4;
 
         idle_animation.setLoop(true);
         move_animation.setLoop(true);
+        jump_animation.setLoop(false);
+        climb_animation.setLoop(true);
 
         try idle_animation.createFromTexture(
             texture_atlas,
@@ -81,8 +78,28 @@ pub const Player = struct {
             move_duration_array[0..], // Frame durations
         );
 
+        try jump_animation.createFromTexture(
+            texture_atlas,
+            Vector2.new(0.0, 3.0), // Starting coordinates
+            Vector2.new(16.0, 16.0), // Sprite Size
+            1, // Number of frames/cells/regions
+            jump_rso_array[0..],
+            jump_duration_array[0..], // Frame durations
+        );
+
+        try climb_animation.createFromTexture(
+            texture_atlas,
+            Vector2.new(0.0, 0.0), // Starting coordinates
+            Vector2.new(16.0, 16.0), // Sprite Size
+            4, // Number of frames/cells/regions
+            climb_rso_array[0..],
+            climb_duration_array[0..], // Frame durations
+        );
+
         try new_player.animator.?.addAnimation(idle_animation);
         try new_player.animator.?.addAnimation(move_animation);
+        try new_player.animator.?.addAnimation(jump_animation);
+        try new_player.animator.?.addAnimation(climb_animation);
 
         new_player.animator.?.play("idle", false);
 
@@ -91,7 +108,6 @@ pub const Player = struct {
 
     /// Frees any allocated memory
     pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
-        //Sprite.free(allocator, self.sprite.?);
         Animator2d.free(allocator, self.animator.?);
         allocator.destroy(self);
     }
@@ -108,7 +124,7 @@ pub const Player = struct {
         const target_position = self.position.add( //
             Vector3.new( //
             input_horizontal * speed, //
-            input_vertical * speed, //
+            0.0, //
             0.0, //
         ));
 
@@ -127,18 +143,6 @@ pub const Player = struct {
         } else {
             self.animator.?.play("idle", false);
         }
-
-        //if (up) {
-        //    const region = self.sprite.?.textureRegion().?;
-        //    const old_coords = region.atlasCoordinates();
-        //    region.setAtlasCoordinates(Vector2.new(old_coords.x() + 1.0, old_coords.y()), true);
-        //}
-
-        //if (down) {
-        //    const region = self.sprite.?.textureRegion().?;
-        //    const old_coords = region.atlasCoordinates();
-        //    region.setAtlasCoordinates(Vector2.new(old_coords.x() - 1.0, old_coords.y()), true);
-        //}
 
         self.animator.?.update(delta);
     }

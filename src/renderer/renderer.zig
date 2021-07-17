@@ -147,7 +147,7 @@ pub const Renderer = struct {
         background_color.a = background_opacity;
 
         // Draw background window
-        //Renderer.drawColoredQuadGui(Vector3.new(0.0, window_size_y - background_size.y(), 0.0), background_size, background_color);
+        Renderer.drawColoredQuadGui(Vector3.new(0.0, window_size_y - background_size.y(), 0.0), background_size, background_color);
 
         // Populate Stats
         const frame_time: f64 = FrameStatistics.frameTime();

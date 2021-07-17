@@ -1,43 +1,60 @@
-## **GOALS** ##
+## **GOALS**
 - [ ] Create a minimum framework to allow for a small
 2D pixel-art game.
 
-## **TODO** ##
+## **TODO**
 
-### Bugs ###
+### Bugs
 
-### General ###
+### General
 - Brainstorm a new name for the project
+- Move to a shared-library for projects to import
+	- Remove main.zig
+	- Change build.zig
 - Move Vectorx/matrix4 to a math directory
 
-### Renderer ###
-- Fix drawColoredQuadGui
+### Renderer
 - Font Rendering
 	- Dynamically generate font atlas and store the uvs in the glyphs
 - Pixel snap
+- Re-Iterate over renderer to use a implementation wrapper such as the one found https://github.com/zig-community/Zig-Showdown/blob/main/src/client/Renderer.zig
 
-### Texture ###
+### Texture
 
-### Sprite ###
+### Sprite
 - Sprite origin ( Not really working yet )
 - Sorting Orderer
 - Fix rotation with the new batch renderer
 
-### Animation System ###
-### Input ###
+### GUI
+- Create some basic GUI helpers such as buttons
+
+### Animation System
+
+### Input
 - Mouse manage state to detect down
 
-### Collision System ###
+### Collision System
 - Basic AABB (axis-aligned bounding box) collision system
 - Is Mouse over 
 
-### Audio ###
+### Audio
 - integrate libsoundio or fmod
 
-### Window ###
+### Window
 - Wrapper for window
 
-## **LOG** ##
+## **LOG**
+- **[07-17-2021]**
+	- 
+- **[07-16-2021]**
+	- Finally got around to fixing drawColoredQuadGui.
+- **[07-15-2021]**
+	- Deleted scene/entity/component files as that will be project dependent and this is only a framework.
+	- 
+- **[07-14-2021]**
+	- Looking into how to handle Entities and Components. Determined that since this is not an Engine, just a framework, that any Entity/Component systems should
+		be implemented per project since that type of thing would be project dependent anyways.
 - **[06-03-2021]**
 	- Basic animation system implemented
 	- Spent hours trying to figure out why my spritesheets would not load properly. Forgot I initially set the file loader buffer to 4096 since I was loading single frame textures.
