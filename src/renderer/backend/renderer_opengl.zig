@@ -40,6 +40,7 @@ const Application = @import("../../core/application.zig").Application;
 const framebuffa = @import("../framebuffer.zig");
 const Framebuffer = framebuffa.Framebuffer;
 const FrameStatistics = @import("../../utils/profiling/frame_statistics.zig").FrameStatistics;
+// ----------------------------------------------------------------------------------------
 
 // Testing vertices and indices
 // zig fmt: off

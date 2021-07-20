@@ -15,13 +15,13 @@ I do **_not_** recommend using this framework as its existence has been purely f
 - FreeType2 (Font Loading)
 - Sean Barrett Collection: 
 	- stb_image (Image Loading)
+- Miniaudio(Audio)
 
 ## Feature TODOs
 - Legend: x - Initial Implementation
 - [x] - Batch Rendering
 - [x] - Input Wrapper
 - [x] - Font Rendering
-- [ ] - Immediate GUI
 - [ ] - Audio System
 
 

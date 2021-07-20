@@ -50,6 +50,13 @@ pub fn build(b: *std.build.Builder) void {
     //exe.linkLibrary(ft2);
     exe.linkSystemLibrary("libs/freetype/x64_win/freetype");
 
+    // MINIAUDIO
+    exe.addIncludeDir("libs/miniaudio");
+    exe.addCSourceFile("libs/miniaudio/miniaudio_impl.c", &[_][]const u8{
+        if (target.getOsTag() == .windows) "-D__INTRIN_H" else "",
+        "--std=c17",
+    });
+
     // ZALGEBRA
     exe.addPackage(.{
         .name = "zalgebra",

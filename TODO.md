@@ -18,6 +18,8 @@
 	- Dynamically generate font atlas and store the uvs in the glyphs
 - Pixel snap
 - Re-Iterate over renderer to use a implementation wrapper such as the one found https://github.com/zig-community/Zig-Showdown/blob/main/src/client/Renderer.zig
+- DrawLine
+- DrawCircle
 
 ### Texture
 
@@ -34,19 +36,20 @@
 ### Input
 - Mouse manage state to detect down
 
-### Collision System
-- Basic AABB (axis-aligned bounding box) collision system
-- Is Mouse over 
-
 ### Audio
-- integrate libsoundio or fmod
+- Basic miniaudio integration
 
 ### Window
 - Wrapper for window
 
 ## **LOG**
+- **[07-19-2021]**
+	- Playing with miniaudio 
+- **[07-18-2021]**
+	- Look into audio solutions
 - **[07-17-2021]**
-	- 
+	- Playing with collision
+	- Decided that like with entity system, it is project depenent. Therefore, since this is a framework and not an engine, the project-specific implementation should be within the project source code.
 - **[07-16-2021]**
 	- Finally got around to fixing drawColoredQuadGui.
 - **[07-15-2021]**
