@@ -21,7 +21,7 @@ pub fn getStringWidth(text: []const u8, scale: f32) f32 {
     while (index < text_length) : (index += 1) {
         const character: u8 = text[index];
         const glyph = app.default_font.?.glyph(character) catch |err| {
-            std.debug.print("[Font]: Error occurred when retrieving glyph {}! {s}\n", .{ character, err });
+            std.debug.print("[Font]: Error occurred when retrieving glyph {}! {}\n", .{ character, err });
             @panic("[Font]: Failed to find glyph!");
         };
 

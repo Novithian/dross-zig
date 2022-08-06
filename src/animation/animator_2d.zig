@@ -5,7 +5,7 @@ const Vector2 = @import("../core/vector2.zig").Vector2;
 const TextureRegion = @import("../renderer/texture_region.zig").TextureRegion;
 const Frame2d = @import("frame_2d.zig").Frame2d;
 const Animation2d = @import("animation_2d.zig").Animation2d;
-const Renderer = @import("renderer.zig").Renderer;
+const Renderer = @import("../renderer/renderer.zig").Renderer;
 const Math = @import("../math/math.zig").Math;
 
 // -----------------------------------------
@@ -30,7 +30,7 @@ pub const Animator2d = struct {
 
     /// Allocates and builds a new Animation2d instance.
     /// Comments: The caller will own the allocated memory.
-    pub fn new(allocator: *std.mem.Allocator) !*Self {
+    pub fn new(allocator: std.mem.Allocator) !*Self {
         var self = try allocator.create(Animator2d);
 
         self.animations = std.StringHashMap(*Animation2d).init(allocator);
@@ -43,10 +43,10 @@ pub const Animator2d = struct {
     }
 
     /// Cleans up and de-allocates the Animation2d. 
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         var iter = self.animations.iterator();
         while (iter.next()) |entry_animation| {
-            Animation2d.free(allocator, entry_animation.value);
+            Animation2d.free(allocator, entry_animation.value_ptr.*); 
         }
         self.animations.deinit();
         allocator.destroy(self);

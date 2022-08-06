@@ -28,12 +28,12 @@ pub const Font = struct {
     /// Creates a new Font instance
     /// Comments: The caller should only be going through the Resource Handler.
     /// The Resource Handler will automatically handle de-allocating.
-    pub fn new(allocator: *std.mem.Allocator, path: [*c]const u8) !*Self {
+    pub fn new(allocator: std.mem.Allocator, path: [*c]const u8) !*Self {
         var self = try allocator.create(Font);
 
         // Allocate the memory block for the Font Library
         self.library = allocator.create(c.FT_Library) catch |err| {
-            std.debug.print("[Font]: Error occurred while creating font library for {s}! {s}\n", .{ path, err });
+            std.debug.print("[Font]: Error occurred while creating font library for {s}! {}\n", .{ path, err });
             @panic("[Font]: Error occurred while creating font!\n");
         };
         // Initialize the Font Library
@@ -42,7 +42,7 @@ pub const Font = struct {
 
         // Allocate the memory block for the Font Face
         self.face = allocator.create(c.FT_Face) catch |err| {
-            std.debug.print("[Font]: Error occurred while creating font face for {s}! {s}\n", .{ path, err });
+            std.debug.print("[Font]: Error occurred while creating font face for {s}! {}\n", .{ path, err });
             @panic("[Font]: Error occurred while creating font!\n");
         };
         // Initialize the Font Face
@@ -88,16 +88,22 @@ pub const Font = struct {
     }
 
     /// Cleans up and de-allocates any memory in regards to the Font instance.
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         _ = c.FT_Done_Face(self.face.?.*);
         _ = c.FT_Done_FreeType(self.library.?.*);
 
         var glyph_iter = self.glyphs.iterator();
 
         while (glyph_iter.next()) |entry| {
-            var glyph_entry = self.glyphs.remove(entry.key);
+            // var glyph_entry = self.glyphs.remove(entry.key_ptr);
 
-            Glyph.free(allocator, glyph_entry.?.value);
+            // Glyph.free(allocator, glyph_entry.?.value);
+
+            var glyph_entry = self.glyphs.get(entry.key_ptr.*) orelse null; 
+
+            if (self.glyphs.remove(entry.key_ptr.*)) {
+                Glyph.free(allocator, glyph_entry.?);
+            }
         }
 
         self.glyphs.deinit();

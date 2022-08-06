@@ -18,7 +18,7 @@ pub const VertexArrayGl = struct {
 
     /// Allocates and sets up a VertexArrayGl instance
     /// Comments: The caller will own the allocated memory.
-    pub fn new(allocator: *std.mem.Allocator) !*Self {
+    pub fn new(allocator: std.mem.Allocator) !*Self {
         var self = try allocator.create(VertexArrayGl);
 
         c.glGenVertexArrays(1, &self.handle);
@@ -27,7 +27,7 @@ pub const VertexArrayGl = struct {
     }
 
     /// Cleans up and de-allocates the VertexArrayGl instance 
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         c.glDeleteVertexArrays(1, &self.handle);
 
         allocator.destroy(self);

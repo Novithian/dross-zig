@@ -1,7 +1,7 @@
 // Third-Party
 const c = @import("../c_global.zig").c_imp;
 const std = @import("std");
-// dross-rs
+// dross-zig
 //const Timer = @import("../utils/timer.zig").Timer;
 const ResourceHandler = @import("resource_handler.zig").ResourceHandler;
 const Renderer = @import("../renderer/renderer.zig").Renderer;
@@ -49,7 +49,7 @@ var viewport_size: Vector2 = undefined;
 /// Most of the communication from the end-user will come
 /// through the application instance.
 pub const Application = struct {
-    allocator: ?*std.mem.Allocator = undefined,
+    allocator: ?std.mem.Allocator = undefined,
     previous_frame_time: f64 = 0,
 
     const Self = @This();
@@ -57,7 +57,7 @@ pub const Application = struct {
     /// Allocates the necessary components to run the application
     /// Comments: The caller will be the owner of the returned pointer, but
     /// any other required allocated memory will be owned by the engine.
-    pub fn new(allocator: *std.mem.Allocator, title: [*c]const u8, width: c_int, height: c_int, vp_width: f32, vp_height: f32) anyerror!*Self {
+    pub fn new(allocator: std.mem.Allocator, title: [*c]const u8, width: c_int, height: c_int, vp_width: f32, vp_height: f32) anyerror!*Self {
         var self = try allocator.create(Application);
 
         // Initialze GLFW, returns GL_FALSE if an error occured.
@@ -117,7 +117,7 @@ pub const Application = struct {
     /// manually allocated memory as well as some other backend
     /// cleanup.
     /// Comments: Be sure to call before exiting program!    
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         c.glfwDestroyWindow(app_window);
         c.glfwTerminate();
 
@@ -147,7 +147,7 @@ pub const Application = struct {
         while (c.glfwWindowShouldClose(app_window) == 0) {
             // Profiling
             var frame_timer = std.time.Timer.start() catch |err| {
-                std.debug.print("[Application]: Error occurred when creating a timer! {s}\n", .{err});
+                std.debug.print("[Application]: Error occurred when creating a timer! {}\n", .{err});
                 @panic("[Application]: Error occurred creating a timer!\n");
             };
 
@@ -168,12 +168,12 @@ pub const Application = struct {
 
             { // Update
                 var update_timer = std.time.Timer.start() catch |err| {
-                    std.debug.print("[Application]: Error occurred when creating a timer! {s}\n", .{err});
+                    std.debug.print("[Application]: Error occurred when creating a timer! {}\n", .{err});
                     @panic("[Application]: Error occurred creating a timer!\n");
                 };
 
                 _ = update_loop(delta) catch |err| {
-                    std.debug.print("[Application]: Update loop encountered an error! {s}\n", .{err});
+                    std.debug.print("[Application]: Update loop encountered an error! {}\n", .{err});
                     @panic("[Application]: Error occurred during the update loop!\n");
                 };
 
@@ -182,7 +182,7 @@ pub const Application = struct {
 
             { // Render
                 var draw_timer = std.time.Timer.start() catch |err| {
-                    std.debug.print("[Application]: Error occurred when creating a timer! {s}\n", .{err});
+                    std.debug.print("[Application]: Error occurred when creating a timer! {}\n", .{err});
                     @panic("[Application]: Error occurred creating a timer!\n");
                 };
 
@@ -290,6 +290,7 @@ pub const Application = struct {
 
     /// Resize the application
     pub fn resize(self: *Self, x: c_int, y: c_int, width: c_int, height: c_int) void {
+        _ = self;
         // Call renderer's resize method
         Renderer.resizeViewport(x, y, width, height);
         setWindowSize(@intToFloat(f32, width), @intToFloat(f32, height));
@@ -297,6 +298,7 @@ pub const Application = struct {
 
     /// Sets the application's window title
     pub fn setWindowTitle(self: *Self, title: [*c]const u8) void {
+        _ = self;
         c.glfwSetWindowTitle(app_window, title);
     }
 

@@ -23,7 +23,7 @@ pub const IndexBufferGl = struct {
 
     /// Allocates and sets up a new IndexBufferGl instance.
     /// Comments: The caller will own the allocated data.
-    pub fn new(allocator: *std.mem.Allocator) !*Self {
+    pub fn new(allocator: std.mem.Allocator) !*Self {
         var self = try allocator.create(IndexBufferGl);
 
         c.glGenBuffers(1, &self.handle);
@@ -32,7 +32,7 @@ pub const IndexBufferGl = struct {
     }
 
     /// Cleans up and de-allocates the Index Buffer
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         c.glDeleteBuffers(1, &self.handle);
 
         allocator.destroy(self);
@@ -56,7 +56,7 @@ pub const IndexBufferGl = struct {
     /// Allocates memory and stores data within the the currently bound buffer object.
     pub fn data(self: *Self, indices: []const c_uint, usage: BufferUsageGl) void {
         self.index_count = @intCast(c_uint, indices.len);
-        const indices_ptr = @ptrCast(*const c_void, indices.ptr);
+        const indices_ptr = @ptrCast(*const anyopaque, indices.ptr);
         const indices_size = @intCast(c_longlong, @sizeOf(c_uint) * indices.len);
 
         c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, indices_size, indices_ptr, @enumToInt(usage));

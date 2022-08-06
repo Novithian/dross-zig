@@ -1,3 +1,9 @@
 [submodule "libs/zalgebra"]
 	path = libs/zalgebra
 	url = https://github.com/kooparse/zalgebra.git
+[submodule "libs/zig-miniaudio"]
+	path = libs/zig-miniaudio
+	url = https://github.com/prime31/zig-miniaudio.git
+[submodule "libs/freetype/freetype"]
+	path = libs/freetype/freetype
+	url = https://github.com/freetype/freetype.git

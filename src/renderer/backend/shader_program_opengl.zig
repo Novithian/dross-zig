@@ -24,7 +24,7 @@ pub const ShaderProgramGl = struct {
 
     /// Allocates and build a ShaderProgramGl instance 
     /// Comments: The caller will own the allocated memory
-    pub fn new(allocator: *std.mem.Allocator) !*Self {
+    pub fn new(allocator: std.mem.Allocator) !*Self {
         var self = try allocator.create(ShaderProgramGl);
 
         self.handle = c.glCreateProgram();
@@ -33,7 +33,7 @@ pub const ShaderProgramGl = struct {
     }
 
     /// Cleans up and de-allocates ShaderProgramGl instance 
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         c.glDeleteProgram(self.handle);
 
         allocator.destroy(self);

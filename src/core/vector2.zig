@@ -1,7 +1,7 @@
 // Third Parties
 const std = @import("std");
 const za = @import("zalgebra");
-const Vec2 = za.vec2;
+const Vec2 = za.Vec2;
 // dross-zig
 // -----------------------------------------
 
@@ -9,7 +9,7 @@ const Vec2 = za.vec2;
 //      - Vector2 -
 // -----------------------------------------
 pub const Vector2 = struct {
-    data: Vec2,
+    data: za.Vec2,
 
     const Self = @This();
 
@@ -23,12 +23,12 @@ pub const Vector2 = struct {
 
     /// Returns the value of the x component
     pub fn x(self: Self) f32 {
-        return self.data.x;
+        return self.data.x();
     }
 
     /// Returns the value of the y component
     pub fn y(self: Self) f32 {
-        return self.data.y;
+        return self.data.y();
     }
 
     /// Builds and returns a Vector2 with all components
@@ -84,7 +84,7 @@ pub const Vector2 = struct {
 
     /// Returns whether two vectors are equal or not
     pub fn isEqual(lhs: Self, rhs: Self) bool {
-        return lsh.data.is_eq(rhs.data);
+        return lhs.data.is_eq(rhs.data);
     }
 
     /// Subtraction between two vectors.

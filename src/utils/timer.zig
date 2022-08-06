@@ -1,6 +1,5 @@
 // Third Parties
 const std = @import("std");
-const time = std.time;
 // dross-zig
 // -----------------------------------------------------------------------------
 
@@ -15,7 +14,7 @@ pub const Timer = struct {
 
     /// Allocates and builds a Timer
     /// Comments: The caller will own the memory
-    pub fn new(allocator: *std.mem.Allocator, label: []const u8) *Self {
+    pub fn new(allocator: std.mem.Allocator, label: []const u8) *Self {
         var timer = allocator.create(Timer) catch |err| {
             std.debug.print("[Timer]: Error occurred when creating a timer! {s}\n", .{err});
             @panic("[Timer]: Error occurred creating a timer!\n");
@@ -27,7 +26,7 @@ pub const Timer = struct {
     }
 
     /// Frees up the timer
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         if (self.is_running) {
             _ = self.stop();
         }
@@ -38,14 +37,14 @@ pub const Timer = struct {
     /// Starts the timer
     pub fn start(self: *Self) void {
         self.is_running = true;
-        self.start_time = @intToFloat(f64, time.nanoTimestamp());
+        self.start_time = @intToFloat(f64, std.time.nanoTimestamp());
     }
 
     /// Stops the timer
     pub fn stop(self: *Self) f64 {
         if (!self.is_running) return -1.0;
         self.is_running = false;
-        const end_time = @intToFloat(f64, time.nanoTimestamp());
+        const end_time = @intToFloat(f64, std.time.nanoTimestamp());
         const duration = (end_time - self.start_time) / @intToFloat(f64, std.time.ns_per_ms);
 
         std.debug.print("[Timer][{s}]: {d:5} ms\n", .{ self.label, duration });
@@ -55,6 +54,6 @@ pub const Timer = struct {
 
     /// Reset the timer
     pub fn reset(self: *Self) void {
-        self.start_time = @intToFloat(f64, timer.nanoTimestamp());
+        self.start_time = @intToFloat(f64, std.time.nanoTimestamp());
     }
 };

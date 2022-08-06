@@ -1,9 +1,9 @@
 // Third Parties
 const std = @import("std");
 const za = @import("zalgebra");
-const Vec2 = za.vec2;
-const Vec3 = za.vec3;
-const Vec4 = za.vec4;
+const Vec2 = za.Vec2;
+const Vec3 = za.Vec3;
+const Vec4 = za.Vec4;
 // dross-zig
 const Vector2 = @import("vector2.zig").Vector2;
 const Vector3 = @import("vector3.zig").Vector3;
@@ -40,17 +40,17 @@ pub const Vector4 = struct {
 
     /// Returns the value of the x component
     pub fn x(self: Self) f32 {
-        return self.data.x;
+        return self.x();
     }
 
     /// Returns the value of the y component
     pub fn y(self: Self) f32 {
-        return self.data.y;
+        return self.y();
     }
 
     /// Returns the value of the z component
     pub fn z(self: Self) f32 {
-        return self.data.z;
+        return self.z();
     }
 
     /// Returns the value of the w component
@@ -68,6 +68,7 @@ pub const Vector4 = struct {
 
     /// Copies the values of the given Vector
     pub fn copy(self: Self, other: Self) Self {
+        _ = self;
         return .{
             .data = Vec4.new(other.data.x, other.data.y, other.data.z, other.data.w),
         };

@@ -2,11 +2,8 @@
 const std = @import("std");
 // Dross-zig
 const Dross = @import("dross_zig.zig");
-usingnamespace Dross;
 const Player = @import("sandbox/player.zig").Player;
 // -------------------------------------------
-
-// Allocator
 
 // Application Infomation
 const APP_TITLE = "Dross-Zig Application";
@@ -16,36 +13,36 @@ const APP_VIEWPORT_WIDTH = 320;
 const APP_VIEWPORT_HEIGHT = 180;
 
 // Application related
-var app: *Application = undefined;
-var allocator: *std.mem.Allocator = undefined;
+var app: *Dross.Application = undefined;
+var allocator: std.mem.Allocator = undefined;
 
 // Gameplay related
-var camera: *Camera2d = undefined;
+var camera: *Dross.Camera2d = undefined;
 
 var player: *Player = undefined;
 
-var quad_position_two: Vector3 = undefined;
-var indicator_position: Vector3 = undefined;
+var quad_position_two: Dross.Vector3 = undefined;
+var indicator_position: Dross.Vector3 = undefined;
 
-var quad_sprite_two: *Sprite = undefined;
-var indicator_sprite: *Sprite = undefined;
-var sprite_sheet_example: *Sprite = undefined;
+var quad_sprite_two: *Dross.Sprite = undefined;
+var indicator_sprite: *Dross.Sprite = undefined;
+var sprite_sheet_example: *Dross.Sprite = undefined;
 
 // Colors
-const background_color: Color = .{
+const background_color: Dross.Color = .{
     .r = 0.27843,
     .g = 0.27843,
     .b = 0.27843,
 };
 
-const ground_color: Color = .{
+const ground_color: Dross.Color = .{
     .r = 0.08235,
     .g = 0.12157,
     .b = 0.14510,
     .a = 1.0,
 };
 
-const white: Color = .{
+const white: Dross.Color = .{
     .r = 1.0,
     .g = 1.0,
     .b = 1.0,
@@ -57,28 +54,36 @@ const white: Color = .{
 //    .b = 0.36471,
 //};
 
-const ground_position: Vector3 = Vector3.new(0.0, 0.0, 0.0);
-const ground_scale: Vector3 = Vector3.new(20.0, 1.0, 0.0);
-const indentity_scale: Vector3 = Vector3.new(1.0, 1.0, 0.0);
+const ground_position: Dross.Vector3 = Dross.Vector3.new(0.0, 0.0, 0.0);
+const ground_scale: Dross.Vector3 = Dross.Vector3.new(20.0, 1.0, 0.0);
+const indentity_scale: Dross.Vector3 = Dross.Vector3.new(1.0, 1.0, 0.0);
 
 const max_random = 20.0;
 const random_count = 8000.0;
-var random_positions: []Vector3 = undefined;
-var random_colors: []Color = undefined;
+var random_positions: []Dross.Vector3 = undefined;
+var random_colors: []Dross.Color = undefined;
 
 pub fn main() anyerror!u8 {
 
     // create a general purpose allocator
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    allocator = &gpa.allocator;
+    allocator = gpa.allocator();
 
     defer {
         const leaked = gpa.deinit();
         if (leaked) @panic("[Dross-Application Name]: Memory leak detected!");
     }
 
+    // Create test audio engine
+    //var audio_engine = try Dross.AudioEngine.create(allocator);
+    //defer audio_engine.destroy();
+
+    //audio_engine.setVolume(0.15);
+
+    //try audio_engine.playOneShot("assets/audio/sfx/test_sfx.wav");
+
     // Create the application
-    app = try Application.new(
+    app = try Dross.Application.new(
         allocator,
         APP_TITLE,
         APP_WINDOW_WIDTH,
@@ -88,39 +93,39 @@ pub fn main() anyerror!u8 {
     );
 
     // Clean up the allocated application before exiting
-    defer Application.free(allocator, app);
+    defer Dross.Application.free(allocator, app);
 
     // Setup
-    camera = try Camera2d.new(allocator);
-    defer Camera2d.free(allocator, camera);
+    camera = try Dross.Camera2d.new(allocator);
+    defer Dross.Camera2d.free(allocator, camera);
 
     player = try Player.new(allocator);
 
-    quad_sprite_two = try Sprite.new(allocator, "enemy_01_idle", "assets/sprites/s_enemy_01_idle.png", Vector2.zero(), Vector2.new(16.0, 16.0), Vector2.new(1.0, 1.0));
-    indicator_sprite = try Sprite.new(allocator, "indicator", "assets/sprites/s_ui_indicator.png", Vector2.zero(), Vector2.new(16.0, 16.0), Vector2.new(1.0, 1.0));
+    quad_sprite_two = try Dross.Sprite.new(allocator, "enemy_01_idle", "assets/sprites/s_enemy_01_idle.png", Dross.Vector2.zero(), Dross.Vector2.new(16.0, 16.0), Dross.Vector2.new(1.0, 1.0));
+    indicator_sprite = try Dross.Sprite.new(allocator, "indicator", "assets/sprites/s_ui_indicator.png", Dross.Vector2.zero(), Dross.Vector2.new(16.0, 16.0), Dross.Vector2.new(1.0, 1.0));
 
     //quad_sprite_two.*.setOrigin(Vector2.new(7.0, 14.0));
     //indicator_sprite.*.setOrigin(Vector2.new(8.0, 11.0));
     //indicator_sprite.*.setAngle(30.0);
 
     defer Player.free(allocator, player);
-    defer Sprite.free(allocator, quad_sprite_two);
-    defer Sprite.free(allocator, indicator_sprite);
+    defer Dross.Sprite.free(allocator, quad_sprite_two);
+    defer Dross.Sprite.free(allocator, indicator_sprite);
 
-    quad_position_two = Vector3.new(2.0, 1.0, 1.0);
-    indicator_position = Vector3.new(5.0, 1.0, -1.0);
+    quad_position_two = Dross.Vector3.new(2.0, 1.0, 1.0);
+    indicator_position = Dross.Vector3.new(5.0, 1.0, -1.0);
 
-    Renderer.changeClearColor(background_color);
+    Dross.Renderer.changeClearColor(background_color);
 
-    var random_positions_arr: [random_count]Vector3 = undefined;
-    var random_colors_arr: [random_count]Color = undefined;
+    var random_positions_arr: [random_count]Dross.Vector3 = undefined;
+    var random_colors_arr: [random_count]Dross.Color = undefined;
 
     var count: usize = random_count;
     var index: usize = 0;
 
     while (index < count) : (index += 1) {
-        random_positions_arr[index] = try Vector3.random(max_random);
-        random_colors_arr[index] = try Color.random();
+        random_positions_arr[index] = try Dross.Vector3.random(max_random);
+        random_colors_arr[index] = try Dross.Color.random();
     }
 
     random_positions = random_positions_arr[0..];
@@ -135,11 +140,11 @@ pub fn main() anyerror!u8 {
 /// Defines what game-level tick/update logic you want to control in the game.
 pub fn update(delta: f64) anyerror!void {
     const delta32 = @floatCast(f32, delta);
-    const speed: f32 = 8.0 * delta32;
-    const rotational_speed = 100.0 * delta32;
-    const scale_speed = 10.0 * delta32;
-    const max_scale = 5.0;
-    const movement_smoothing = 0.6;
+    //const speed: f32 = 8.0 * delta32;
+    //const rotational_speed = 100.0 * delta32;
+    //const scale_speed = 10.0 * delta32;
+    // const max_scale = 5.0;
+    // const movement_smoothing = 0.6;
 
     player.update(delta32);
 
@@ -165,9 +170,9 @@ pub fn update(delta: f64) anyerror!void {
 /// Defines the game-level rendering
 pub fn render() anyerror!void {
     player.render();
-    Renderer.drawSprite(quad_sprite_two, quad_position_two);
-    Renderer.drawSprite(indicator_sprite, indicator_position);
-    Renderer.drawColoredQuad(ground_position, ground_scale, ground_color);
+    Dross.Renderer.drawSprite(quad_sprite_two, quad_position_two);
+    Dross.Renderer.drawSprite(indicator_sprite, indicator_position);
+    Dross.Renderer.drawColoredQuad(ground_position, ground_scale, ground_color);
     //Renderer.drawColoredQuad(player.position, indentity_scale, ground_color);
     //Renderer.drawColoredQuad(indicator_position, indentity_scale, ground_color);
     //Renderer.drawColoredQuad(quad_position_two, indentity_scale, ground_color);

@@ -54,7 +54,7 @@ pub const Color = struct {
             break :blk seed;
         });
 
-        const rand = &prng.random;
+        const rand = prng.random();
 
         return Self{
             .r = rand.float(f32),

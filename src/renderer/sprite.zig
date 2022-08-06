@@ -28,7 +28,7 @@ pub const Sprite = struct {
     /// Comments: The allocated Sprite will be owned by the caller, but the 
     /// allocated Texture is owned by the Resource Handler.
     pub fn new(
-        allocator: *std.mem.Allocator,
+        allocator: std.mem.Allocator,
         texture_name: []const u8,
         texture_path: []const u8,
         atlas_coordinates: Vector2,
@@ -59,7 +59,7 @@ pub const Sprite = struct {
     }
 
     /// Cleans up and de-allocates the Sprite
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         // Sprite is not the owner of texture, but has a reference to it is all.
         // Resource Handler is what owns all textures and will dispose of it.
         // It wouldn't make sense to unload a texture just because a single

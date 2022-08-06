@@ -7,6 +7,7 @@ I do **_not_** recommend using this framework as its existence has been purely f
 ## Dependencies
 **Zig**:
 - [zalgebra](https://github.com/kooparse/zalgebra)
+- [zig-miniaudio](https://github.com/prime31/zig-miniaudio)
 
 **C/C++ libraries**:
 - GLFW (Window and input)
@@ -15,7 +16,7 @@ I do **_not_** recommend using this framework as its existence has been purely f
 - FreeType2 (Font Loading)
 - Sean Barrett Collection: 
 	- stb_image (Image Loading)
-- Miniaudio(Audio)
+- Miniaudio via zig-miniaudio(Audio)
 
 ## Feature TODOs
 - Legend: x - Initial Implementation

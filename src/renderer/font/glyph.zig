@@ -28,7 +28,7 @@ pub const Glyph = struct {
     /// only player this is called, so the owner 
     /// SHOULD be a Font instance.
     pub fn new(
-        allocator: *std.mem.Allocator,
+        allocator: std.mem.Allocator,
         data: [*c]u8,
         desired_width: u32,
         desired_rows: u32,
@@ -48,19 +48,19 @@ pub const Glyph = struct {
 
     /// Cleans up and de-allocates the Glyph and 
     /// any memory it allocated.
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         Texture.free(allocator, self.internal_texture.?);
         allocator.destroy(self);
     }
 
     /// Sets the stored size of the glyph
-    pub fn setWidth(self: *Self, width: u32) void {
-        self.internal_width = width;
+    pub fn setWidth(self: *Self, desired_width: u32) void {
+        self.internal_width = desired_width;
     }
 
     /// Sets the stored size of the glyph
-    pub fn setRows(self: *Self, rows: u32) void {
-        self.internal_rows = rows;
+    pub fn setRows(self: *Self, desired_rows: u32) void {
+        self.internal_rows = desired_rows;
     }
 
     /// Sets the stored offset of the glyph

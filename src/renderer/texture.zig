@@ -36,7 +36,7 @@ pub const Texture = struct {
     /// Comments: The caller will own the allocated data, but
     /// this should be done through the Resource Handler. via
     /// loadTexture()
-    pub fn new(allocator: *std.mem.Allocator, name: []const u8, path: []const u8) !*Self {
+    pub fn new(allocator: std.mem.Allocator, name: []const u8, path: []const u8) !*Self {
         var self = try allocator.create(Texture);
 
         switch (selected_api) {
@@ -59,7 +59,7 @@ pub const Texture = struct {
 
     /// Allocates and sets up a dataless Texture
     /// Comments: The caller will own the allocated data.
-    pub fn newDataless(allocator: *std.mem.Allocator, desired_size: Vector2) !*Self {
+    pub fn newDataless(allocator: std.mem.Allocator, desired_size: Vector2) !*Self {
         var self = try allocator.create(Texture);
 
         switch (selected_api) {
@@ -83,7 +83,7 @@ pub const Texture = struct {
     /// Comments: The caller will own the allocated data, but
     /// this should be done through the Resource Handler via
     /// loadFont().
-    pub fn newFont(allocator: *std.mem.Allocator, data: [*c]u8, width: u32, rows: u32) !*Self {
+    pub fn newFont(allocator: std.mem.Allocator, data: [*c]u8, width: u32, rows: u32) !*Self {
         var self = try allocator.create(Texture);
 
         switch (selected_api) {
@@ -106,7 +106,7 @@ pub const Texture = struct {
     /// Cleans up and de-allocates the Texture 
     /// Comments: Should only be called by the Resource Handler
     /// via unloadTexture()/unloadFont()
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         switch (selected_api) {
             renderer.BackendApi.OpenGl => {
                 TextureGl.free(allocator, self.gl_texture.?);

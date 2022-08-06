@@ -30,7 +30,7 @@ pub const VertexBufferGl = struct {
 
     /// Allocates and builds a new VertexBufferGl
     /// Comments: The caller will own the allocated memory.
-    pub fn new(allocator: *std.mem.Allocator) !*Self {
+    pub fn new(allocator: std.mem.Allocator) !*Self {
         var self = try allocator.create(VertexBufferGl);
 
         c.glGenBuffers(1, &self.handle);
@@ -39,7 +39,7 @@ pub const VertexBufferGl = struct {
     }
 
     /// Cleans up and de-allocates the Vertex Buffer
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         c.glDeleteBuffers(1, &self.handle);
         allocator.destroy(self);
     }
@@ -56,7 +56,8 @@ pub const VertexBufferGl = struct {
 
     /// Allocates memory and stores data within the currently bound buffer object.
     pub fn data(self: Self, vertices: []const f32, usage: BufferUsageGl) void {
-        const vertices_ptr = @ptrCast(*const c_void, vertices.ptr);
+        _ = self;
+        const vertices_ptr = @ptrCast(*const anyopaque, vertices.ptr);
         const vertices_size = @intCast(c_longlong, @sizeOf(f32) * vertices.len);
 
         c.glBufferData(c.GL_ARRAY_BUFFER, vertices_size, vertices_ptr, @enumToInt(usage));
@@ -64,7 +65,8 @@ pub const VertexBufferGl = struct {
 
     /// Allocates memory and stores data within the currently bound buffer object.
     pub fn dataV(self: Self, vertices: []Vertex, usage: BufferUsageGl) void {
-        const vertices_ptr = @ptrCast(*const c_void, vertices.ptr);
+        _ = self;
+        const vertices_ptr = @ptrCast(*const anyopaque, vertices.ptr);
         const vertices_size = @intCast(c_longlong, @sizeOf(Vertex) * vertices.len);
 
         c.glBufferData(c.GL_ARRAY_BUFFER, vertices_size, vertices_ptr, @enumToInt(usage));
@@ -72,16 +74,17 @@ pub const VertexBufferGl = struct {
     ///
     /// Allocates memory and stores data within the currently bound buffer object.
     pub fn dataSize(self: Self, vertices: []Vertex, size: u32, usage: BufferUsageGl) void {
-        const vertices_ptr = @ptrCast(*const c_void, vertices.ptr);
+        _ = self;
+        const vertices_ptr = @ptrCast(*const anyopaque, vertices.ptr);
         //const vertices_size = @intCast(c_longlong, @sizeOf(Vertex) * vertices.len);
-        const size = @intCast(c_longlong, size);
 
-        c.glBufferData(c.GL_ARRAY_BUFFER, vertices_size, vertices_ptr, @enumToInt(usage));
+        c.glBufferData(c.GL_ARRAY_BUFFER, @intCast(c_longlong, size), vertices_ptr, @enumToInt(usage));
     }
 
     /// Allocates memory within the the currently bound buffer object.
     /// `length` is the amount of floats to reserve.
     pub fn dataless(self: Self, length: f32, usage: BufferUsageGl) void {
+        _ = self;
         const size = @floatToInt(c_longlong, @sizeOf(f32) * length);
 
         c.glBufferData(c.GL_ARRAY_BUFFER, size, null, @enumToInt(usage));
@@ -89,23 +92,26 @@ pub const VertexBufferGl = struct {
 
     /// Overwrites previously allocated data within the currently bound buffer object.
     pub fn subdata(self: Self, vertices: []const f32) void {
+        _ = self;
         const size = @intCast(c_longlong, @sizeOf(f32) * vertices.len);
-        const ptr = @ptrCast(*const c_void, vertices.ptr);
+        const ptr = @ptrCast(*const anyopaque, vertices.ptr);
         c.glBufferSubData(c.GL_ARRAY_BUFFER, 0, size, ptr);
     }
 
     /// Overwrites previously allocated data within the currently bound buffer object.
     pub fn subdataV(self: Self, vertices: []Vertex) void {
+        _ = self;
         const size = @intCast(c_longlong, @sizeOf(Vertex) * vertices.len);
-        const ptr = @ptrCast(*const c_void, vertices.ptr);
+        const ptr = @ptrCast(*const anyopaque, vertices.ptr);
         c.glBufferSubData(c.GL_ARRAY_BUFFER, 0, size, ptr);
     }
 
     /// Overwrites previously allocated data within the currently bound buffer object.
     pub fn subdataSize(self: Self, vertices: []Vertex, size: u32) void {
+        _ = self;
         //const size = @intCast(c_longlong, @sizeOf(Vertex) * vertices.len);
         const vertices_size = @intCast(c_longlong, size);
-        const ptr = @ptrCast(*const c_void, vertices.ptr);
+        const ptr = @ptrCast(*const anyopaque, vertices.ptr);
         c.glBufferSubData(c.GL_ARRAY_BUFFER, 0, vertices_size, ptr);
     }
     /// Clears out the currently bound Vertex Buffer

@@ -14,7 +14,7 @@ const fs = @import("../utils/file_loader.zig");
 // -----------------------------------------
 
 /// The allocator used by the ResourceHandler.
-var resource_allocator: *std.mem.Allocator = undefined;
+var resource_allocator: std.mem.Allocator = undefined;
 var texture_map: std.StringHashMap(*Texture) = undefined;
 var font_map: std.StringHashMap(*Font) = undefined;
 
@@ -23,7 +23,7 @@ pub const ResourceHandler = struct {
     /// Comment: The ResourceHandler will be owned by the engine, and 
     /// all resources allocated by the resource handler are owned
     /// by the ResourceHandler.
-    pub fn new(allocator: *std.mem.Allocator) void {
+    pub fn new(allocator: std.mem.Allocator) void {
         resource_allocator = allocator;
 
         // Initialize the cache maps
@@ -37,11 +37,11 @@ pub const ResourceHandler = struct {
         var font_iter = font_map.iterator();
 
         while (texture_iter.next()) |entry| {
-            unloadTexture(entry.key);
+            unloadTexture(entry.key_ptr.*);
         }
 
         while (font_iter.next()) |entry| {
-            unloadFont(entry.key);
+            unloadFont(entry.key_ptr.*);
         }
 
         font_map.deinit();
@@ -66,9 +66,12 @@ pub const ResourceHandler = struct {
     /// Will be called automatically at end of application, but
     /// can be used when switching scenes.
     pub fn unloadTexture(name: []const u8) void {
-        var texture_entry = texture_map.remove(name);
+        // var texture_entry = texture_map.remove(name);
+        var texture_entry = texture_map.get(name) orelse null; 
 
-        Texture.free(resource_allocator, texture_entry.?.value);
+        if (texture_map.remove(name)) {
+            Texture.free(resource_allocator, texture_entry.?);
+        }
     }
 
     /// Loads a font at the given `path` (relative to build/executable).
@@ -82,7 +85,7 @@ pub const ResourceHandler = struct {
         };
 
         font_map.put(name, font) catch |err| {
-            std.debug.print("[Resource Handler]: Error occurred while adding font({s}) to map!\n", .{path});
+            std.debug.print("[Resource Handler]: Error occurred while adding font({s}) to map! {}\n", .{path, err});
             return null;
         };
 
@@ -94,8 +97,14 @@ pub const ResourceHandler = struct {
     /// lifetime, but can be used anytime.
     /// NOTE(devon): Be careful of dangling pointers.
     pub fn unloadFont(name: []const u8) void {
-        var font_entry = font_map.remove(name);
+        // var font_entry = font_map.remove(name);
 
-        Font.free(resource_allocator, font_entry.?.value);
+        // Font.free(resource_allocator, font_entry.?.value);
+
+        var font_entry = font_map.get(name) orelse null; 
+
+        if (font_map.remove(name)) {
+            Font.free(resource_allocator, font_entry.?);
+        }
     }
 };

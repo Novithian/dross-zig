@@ -15,7 +15,7 @@ const Math = @import("../math/math.zig").Math;
 /// controls the flow of them.
 pub const Animation2d = struct {
     /// The allocator required to populate the frames list.
-    allocator: *std.mem.Allocator = undefined,
+    allocator: std.mem.Allocator = undefined,
     /// The name of the animation
     animation_name: []const u8 = undefined,
     /// Cache for the frames used in the animation
@@ -35,7 +35,7 @@ pub const Animation2d = struct {
 
     /// Allocates and builds a new Animation2d instance.
     /// Comments: The caller will own the allocated memory.
-    pub fn new(allocator: *std.mem.Allocator, animation_name: []const u8) !*Self {
+    pub fn new(allocator: std.mem.Allocator, animation_name: []const u8) !*Self {
         var self = try allocator.create(Animation2d);
 
         self.allocator = allocator;
@@ -50,7 +50,7 @@ pub const Animation2d = struct {
     }
 
     /// Cleans up and de-allocates the Animation2d. 
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         for (self.frames.items) |animation_frame| {
             Frame2d.free(allocator, animation_frame);
         }
@@ -191,7 +191,7 @@ pub const Animation2d = struct {
     /// Sets the flag that tells the Animation2d what frame to remain on,  
     /// final frame (if the animation does NOT loop), or the 
     /// first frame.
-    pub fn setSitOnFinalFrame(self: *Self, bool: sit_on_final_frame) void {
+    pub fn setSitOnFinalFrame(self: *Self, sit_on_final_frame: bool) void {
         self.sit_on_final_frame = sit_on_final_frame;
     }
 

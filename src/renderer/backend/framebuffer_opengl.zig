@@ -15,7 +15,7 @@ pub const FramebufferGl = struct {
     target: c_uint = undefined,
     const Self = @This();
 
-    pub fn new(allocator: *std.mem.Allocator) !*Self {
+    pub fn new(allocator: std.mem.Allocator) !*Self {
         var self = try allocator.create(FramebufferGl);
 
         // Generate the framebuffer handle
@@ -24,7 +24,7 @@ pub const FramebufferGl = struct {
         return self;
     }
 
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         // Delete the buffer
         c.glDeleteFramebuffers(1, &self.handle);
 

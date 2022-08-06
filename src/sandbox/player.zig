@@ -2,8 +2,7 @@
 const std = @import("std");
 
 // dross-zig
-const Dross = @import("../dross_zig.zig");
-usingnamespace Dross;
+const dz = @import("../dross_zig.zig");
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------
@@ -13,47 +12,47 @@ usingnamespace Dross;
 ///
 pub const Player = struct {
     //sprite: ?*Sprite = undefined,
-    animator: ?*Animator2d = undefined,
-    color: Color = undefined,
-    scale: Vector2 = undefined,
-    position: Vector3 = undefined,
+    animator: ?*dz.Animator2d = undefined,
+    color: dz.Color = undefined,
+    scale: dz.Vector2 = undefined,
+    position: dz.Vector3 = undefined,
     flip_h: bool = false,
 
     const Self = @This();
 
     /// Allocates and builds a player
     /// Comments: The caller will be the owner of the memory
-    pub fn new(allocator: *std.mem.Allocator) !*Self {
+    pub fn new(allocator: std.mem.Allocator) !*Self {
         var new_player = try allocator.create(Player);
-        new_player.position = Vector3.new(0.0, 1.0, 0.0);
-        new_player.scale = Vector2.new(1.0, 1.0);
-        new_player.color = Color.white();
+        new_player.position = dz.Vector3.new(0.0, 1.0, 0.0);
+        new_player.scale = dz.Vector2.new(1.0, 1.0);
+        new_player.color = dz.Color.white();
         new_player.flip_h = false;
 
-        new_player.animator = try Animator2d.new(allocator);
+        new_player.animator = try dz.Animator2d.new(allocator);
 
-        const texture_op = try ResourceHandler.loadTexture("player_ani", "assets/sprites/s_player_sheet.png");
-        const texture_atlas = texture_op orelse return TextureErrors.FailedToLoad;
+        const texture_op = try dz.ResourceHandler.loadTexture("player_ani", "assets/sprites/s_player_sheet.png");
+        const texture_atlas = texture_op orelse return dz.TextureErrors.FailedToLoad;
 
-        var idle_animation: *Animation2d = undefined;
-        var move_animation: *Animation2d = undefined;
-        var jump_animation: *Animation2d = undefined;
-        var climb_animation: *Animation2d = undefined;
+        var idle_animation: *dz.Animation2d = undefined;
+        var move_animation: *dz.Animation2d = undefined;
+        var jump_animation: *dz.Animation2d = undefined;
+        var climb_animation: *dz.Animation2d = undefined;
 
-        idle_animation = try Animation2d.new(allocator, "idle");
-        move_animation = try Animation2d.new(allocator, "move");
-        jump_animation = try Animation2d.new(allocator, "jump");
-        climb_animation = try Animation2d.new(allocator, "climb");
+        idle_animation = try dz.Animation2d.new(allocator, "idle");
+        move_animation = try dz.Animation2d.new(allocator, "move");
+        jump_animation = try dz.Animation2d.new(allocator, "jump");
+        climb_animation = try dz.Animation2d.new(allocator, "climb");
 
         const idle_duration_array = [_]f32{0.25} ** 2;
         const move_duration_array = [_]f32{0.25} ** 4;
         const jump_duration_array = [_]f32{0.25} ** 1;
         const climb_duration_array = [_]f32{0.25} ** 4;
 
-        const idle_rso_array = [_]Vector2{Vector2.new(1.0, 1.0)} ** 2;
-        const move_rso_array = [_]Vector2{Vector2.new(1.0, 1.0)} ** 4;
-        const jump_rso_array = [_]Vector2{Vector2.new(1.0, 1.0)} ** 1;
-        const climb_rso_array = [_]Vector2{Vector2.new(1.0, 1.0)} ** 4;
+        const idle_rso_array = [_]dz.Vector2{dz.Vector2.new(1.0, 1.0)} ** 2;
+        const move_rso_array = [_]dz.Vector2{dz.Vector2.new(1.0, 1.0)} ** 4;
+        const jump_rso_array = [_]dz.Vector2{dz.Vector2.new(1.0, 1.0)} ** 1;
+        const climb_rso_array = [_]dz.Vector2{dz.Vector2.new(1.0, 1.0)} ** 4;
 
         idle_animation.setLoop(true);
         move_animation.setLoop(true);
@@ -62,8 +61,8 @@ pub const Player = struct {
 
         try idle_animation.createFromTexture(
             texture_atlas,
-            Vector2.new(0.0, 4.0), // Starting coordinates
-            Vector2.new(16.0, 16.0), // Sprite Size
+            dz.Vector2.new(0.0, 4.0), // Starting coordinates
+            dz.Vector2.new(16.0, 16.0), // Sprite Size
             2, // Number of frames/cells/regions
             idle_rso_array[0..],
             idle_duration_array[0..], // Frame durations
@@ -71,8 +70,8 @@ pub const Player = struct {
 
         try move_animation.createFromTexture(
             texture_atlas,
-            Vector2.new(0.0, 2.0), // Starting coordinates
-            Vector2.new(16.0, 16.0), // Sprite Size
+            dz.Vector2.new(0.0, 2.0), // Starting coordinates
+            dz.Vector2.new(16.0, 16.0), // Sprite Size
             4, // Number of frames/cells/regions
             move_rso_array[0..],
             move_duration_array[0..], // Frame durations
@@ -80,8 +79,8 @@ pub const Player = struct {
 
         try jump_animation.createFromTexture(
             texture_atlas,
-            Vector2.new(0.0, 3.0), // Starting coordinates
-            Vector2.new(16.0, 16.0), // Sprite Size
+            dz.Vector2.new(0.0, 3.0), // Starting coordinates
+            dz.Vector2.new(16.0, 16.0), // Sprite Size
             1, // Number of frames/cells/regions
             jump_rso_array[0..],
             jump_duration_array[0..], // Frame durations
@@ -89,8 +88,8 @@ pub const Player = struct {
 
         try climb_animation.createFromTexture(
             texture_atlas,
-            Vector2.new(0.0, 0.0), // Starting coordinates
-            Vector2.new(16.0, 16.0), // Sprite Size
+            dz.Vector2.new(0.0, 0.0), // Starting coordinates
+            dz.Vector2.new(16.0, 16.0), // Sprite Size
             4, // Number of frames/cells/regions
             climb_rso_array[0..],
             climb_duration_array[0..], // Frame durations
@@ -107,8 +106,8 @@ pub const Player = struct {
     }
 
     /// Frees any allocated memory
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
-        Animator2d.free(allocator, self.animator.?);
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
+        dz.Animator2d.free(allocator, self.animator.?);
         allocator.destroy(self);
     }
 
@@ -116,13 +115,13 @@ pub const Player = struct {
     pub fn update(self: *Self, delta: f32) void {
         const speed: f32 = 8.0 * delta;
         const movement_smoothing = 0.6;
-        const input_horizontal = Input.keyPressedValue(DrossKey.KeyD) - Input.keyPressedValue(DrossKey.KeyA);
-        const input_vertical = Input.keyPressedValue(DrossKey.KeyW) - Input.keyPressedValue(DrossKey.KeyS);
-        const up = Input.keyReleased(DrossKey.KeyUp);
-        const down = Input.keyReleased(DrossKey.KeyDown);
+        const input_horizontal = dz.Input.keyPressedValue(dz.DrossKey.KeyD) - dz.Input.keyPressedValue(dz.DrossKey.KeyA);
+        //const input_vertical = dz.Input.keyPressedValue(dz.DrossKey.KeyW) - dz.Input.keyPressedValue(dz.DrossKey.KeyS);
+        //const up = dz.Input.keyReleased(dz.DrossKey.KeyUp);
+        //const down = dz.Input.keyReleased(dz.DrossKey.KeyDown);
 
         const target_position = self.position.add( //
-            Vector3.new( //
+            dz.Vector3.new( //
             input_horizontal * speed, //
             0.0, //
             0.0, //
@@ -153,6 +152,6 @@ pub const Player = struct {
         //if (!self.animator.?.playing()) return;
         const animation = self.animator.?.animation() orelse return;
         const frame = animation.textureRegion() orelse return;
-        Renderer.drawTexturedQuad(frame, self.position, self.scale, self.color, self.flip_h);
+        dz.Renderer.drawTexturedQuad(frame, self.position, self.scale, self.color, self.flip_h);
     }
 };

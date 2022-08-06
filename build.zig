@@ -1,5 +1,8 @@
 const std = @import("std");
 
+//const ma_build = @import("libs/zig-miniaudio/build.zig");
+const ft_build = @import("libs/freetype/build.zig");
+
 pub fn build(b: *std.build.Builder) void {
     // Standard target options allows the person running `zig build` to choose
     // what target to build for. Here we do not override the defaults, which
@@ -10,6 +13,8 @@ pub fn build(b: *std.build.Builder) void {
     // Standard release options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const mode = b.standardReleaseOptions();
+    // const mod = b.standardDebugOptions();
+    //const mode = b.stan
 
     // For library
     // const lib = b.addSharedLibrary("dross-zig", "src/dross_zig.zig", .unversioned);
@@ -48,20 +53,33 @@ pub fn build(b: *std.build.Builder) void {
     exe.addIncludeDir("libs/freetype");
     exe.addIncludeDir("libs/freetype/include");
     //exe.linkLibrary(ft2);
-    exe.linkSystemLibrary("libs/freetype/x64_win/freetype");
+    // exe.linkSystemLibrary("libs/freetype/x64_win/freetype");
+    // exe.linkSystemLibrary("freetype");
+    const libFT2 = ft_build.buildLibrary(b, mode, target);
+    exe.linkLibrary(libFT2);
 
     // MINIAUDIO
-    exe.addIncludeDir("libs/miniaudio");
-    exe.addCSourceFile("libs/miniaudio/miniaudio_impl.c", &[_][]const u8{
-        if (target.getOsTag() == .windows) "-D__INTRIN_H" else "",
-        "--std=c17",
-    });
+    //exe.addIncludeDir("libs/miniaudio");
+    //exe.addCSourceFile("libs/miniaudio/miniaudio_impl.c", &[_][]const u8{
+    //    if (target.getOsTag() == .windows) "-D__INTRIN_H" else "",
+    //    "--std=c17",
+    //});
 
     // ZALGEBRA
     exe.addPackage(.{
         .name = "zalgebra",
-        .path = "libs/zalgebra/src/main.zig",
+        .source = std.build.FileSource{
+            .path = "libs/zalgebra/src/main.zig",
+        },
     });
+
+    // ZIG-MINIAUDIO
+    //exe.addPackage(.{
+    //    .name = "zig-miniaudio",
+    //    .path = "libs/zig-miniaudio/src/miniaudio.zig",
+    //});
+
+    //ma_build.addMiniaudioToArtifact(b, exe, target, "libs/zig-miniaudio/");
 
     exe.linkSystemLibrary("opengl32");
 

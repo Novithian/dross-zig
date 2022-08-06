@@ -46,7 +46,7 @@ pub const Framebuffer = struct {
     const Self = @This();
 
     /// Sets up the Framebuffer and allocates any required memory
-    pub fn new(allocator: *std.mem.Allocator) !*Self {
+    pub fn new(allocator: std.mem.Allocator) !*Self {
         var self = try allocator.create(Framebuffer);
 
         switch (selected_api) {
@@ -69,7 +69,7 @@ pub const Framebuffer = struct {
     }
 
     /// Frees up any allocated memory
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         FramebufferGl.free(allocator, self.internal.?.gl);
         Texture.free(allocator, self.color_attachment.?);
 
@@ -102,7 +102,7 @@ pub const Framebuffer = struct {
     /// Allocates, builds, and attaches a color attachment for the framebuffer. 
     /// Comments: This is one of the few places where the Texture will be owned by 
     /// this class and will be disposed of properly.
-    pub fn addColorAttachment(self: *Self, allocator: *std.mem.Allocator, attachment: FramebufferAttachmentType, size: Vector2) void {
+    pub fn addColorAttachment(self: *Self, allocator: std.mem.Allocator, attachment: FramebufferAttachmentType, size: Vector2) void {
         self.color_attachment = Texture.newDataless(allocator, size) catch |err| {
             std.debug.print("[FRAMEBUFFER]: Error occurred when adding a color attachment! {}\n", .{err});
             return;

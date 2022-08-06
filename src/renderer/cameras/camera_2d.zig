@@ -53,7 +53,7 @@ pub const Camera2d = struct {
     /// Allocates and setup a Camera2D instance
     /// Comments: The caller will own the camera, which
     /// means they will be responsible for freeing.
-    pub fn new(allocator: *std.mem.Allocator) !*Camera2d {
+    pub fn new(allocator: std.mem.Allocator) !*Camera2d {
         var self = try allocator.create(Camera2d);
 
         self.internal_target_position = Vector3.new(0.0, 0.0, 0.0);
@@ -84,14 +84,14 @@ pub const Camera2d = struct {
     }
 
     /// Ensures to reduce the camera cound and removes the camera from the cameras list
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         camera_count -= 1;
         allocator.destroy(self);
     }
 
     /// Sets the new target position to the desired `position`
-    pub fn setTargetPosition(self: *Self, position: Vector3) void {
-        self.internal_target_position = position;
+    pub fn setTargetPosition(self: *Self, desired_position: Vector3) void {
+        self.internal_target_position = desired_position;
     }
 
     /// Sets the zoom level to the desired `zoom`
@@ -100,8 +100,8 @@ pub const Camera2d = struct {
     }
 
     /// Sets the camera speed
-    pub fn setSpeed(self: *Self, speed: f32) void {
-        self.internal_speed = speed;
+    pub fn setSpeed(self: *Self, desired_speed: f32) void {
+        self.internal_speed = desired_speed;
     }
     /// Sets the position of the camera
     pub fn setPosition(self: *Self, new_position: Vector3) void {

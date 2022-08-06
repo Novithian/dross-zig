@@ -23,7 +23,7 @@ pub const Frame2d = struct {
 
     /// Allocates and builds a new Frame2d instance.
     /// Comments: The caller will own the allocated memory.
-    pub fn new(allocator: *std.mem.Allocator, texture_region: *TextureRegion, frame_duration: f32) !*Self {
+    pub fn new(allocator: std.mem.Allocator, texture_region: *TextureRegion, frame_duration: f32) !*Self {
         var self = try allocator.create(Frame2d);
 
         self.frame_region = texture_region;
@@ -35,7 +35,7 @@ pub const Frame2d = struct {
     /// Cleans up and de-allocates the Frame2d. The TextureRegion
     /// is not owned by the instance, so it will not need to be freed
     /// as it is only a reference.
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         TextureRegion.free(allocator, self.frame_region.?);
         allocator.destroy(self);
     }

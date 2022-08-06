@@ -32,7 +32,7 @@ pub const ShaderGl = struct {
     const Self = @This();
 
     /// Allocates and builds the shader of the requested shader type
-    pub fn new(allocator: *std.mem.Allocator, shader_type: ShaderTypeGl) !*Self {
+    pub fn new(allocator: std.mem.Allocator, shader_type: ShaderTypeGl) !*Self {
         var self = try allocator.create(ShaderGl);
 
         self.handle = c.glCreateShader(@enumToInt(shader_type));
@@ -42,7 +42,7 @@ pub const ShaderGl = struct {
     }
 
     /// Cleans up and de-allocates the Shader instance 
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         c.glDeleteShader(self.handle);
 
         allocator.destroy(self);
@@ -77,7 +77,7 @@ pub const ShaderGl = struct {
         // If the compilation failed, log the message
         if (no_errors == 0) {
             c.glGetShaderInfoLog(self.handle, 512, null, &compilation_log);
-            std.log.err("[Renderer][OpenGL]: Failed to compile {s} shader: \n{s}", .{ self.shader_type, compilation_log });
+            std.log.err("[Renderer][OpenGL]: Failed to compile {} shader: \n{s}", .{ self.shader_type, compilation_log });
             return OpenGlError.ShaderCompilationFailure;
         }
     }

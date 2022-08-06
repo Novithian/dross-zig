@@ -3,7 +3,7 @@ const std = @import("std");
 const c = @import("../../c_global.zig").c_imp;
 // dross-zig
 const Vector2 = @import("../../core/vector2.zig").Vector2;
-const tx = @import("../texture.zig");
+const tx = @import("../../renderer/texture.zig");
 const Texture = tx.Texture;
 // -----------------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ pub const FrameStatistics = struct {
 
     /// Creates a new instance of FrameStatistics.
     /// Comments: The memory allocated will be engine-owned.
-    pub fn new(allocator: *std.mem.Allocator) !void {
+    pub fn new(allocator: std.mem.Allocator) !void {
         stats = try allocator.create(FrameStatistics);
 
         stats.?.frame_time = -1.0;
@@ -37,7 +37,7 @@ pub const FrameStatistics = struct {
     }
 
     /// Cleans up and de-allocates if a FrameStatistics instance exists.
-    pub fn free(allocator: *std.mem.Allocator) void {
+    pub fn free(allocator: std.mem.Allocator) void {
         allocator.destroy(stats.?);
     }
 

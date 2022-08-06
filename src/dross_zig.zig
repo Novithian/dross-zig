@@ -16,6 +16,13 @@ pub usingnamespace @import("renderer/font/font_helpers.zig");
 pub usingnamespace @import("animation/frame_2d.zig");
 pub usingnamespace @import("animation/animation_2d.zig");
 pub usingnamespace @import("animation/animator_2d.zig");
-pub usingnamespace @import("audio/audio_player.zig");
 pub usingnamespace @import("utils/file_loader.zig");
 pub usingnamespace @import("utils/timer.zig");
+
+// Third-parties without wrappers
+
+// ZIG-MINIAUDIO
+//pub const AudioEngine = @import("miniaudio").AudioEngine;
+//pub const SoundGroup = @import("zig-miniaudio").SoundGroup;
+//pub const Sound = @import("zig-miniaudio").Sound;
+//pub const PassThroughEffect = @import("zig-miniaudio").PassThroughEffect;

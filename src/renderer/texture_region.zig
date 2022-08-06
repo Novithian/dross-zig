@@ -24,7 +24,7 @@ pub const TextureRegion = struct {
     /// Comments: The caller will own the TextureRegion, but 
     /// the texture passed is owned by the ResourceHandler.
     pub fn new(
-        allocator: *std.mem.Allocator,
+        allocator: std.mem.Allocator,
         atlas: *Texture, // The Texture Atlas to put a region from.
         coordinates: Vector2, // The region coordinates Ex: (1, 2) would be equal to (8, 16) if the region_size was 8x8.
         region_size: Vector2, // The size of the cell/region being sampled from. Ex: 16x16 region size on an atlas for a 16x16 sprite.
@@ -46,7 +46,7 @@ pub const TextureRegion = struct {
     /// Cleans up and de-allocates the TextureRegion
     /// NOTE(devon): The referenced texture is owned by the
     /// ResourceHandler, so it will be freed by that system.
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         allocator.destroy(self);
     }
 

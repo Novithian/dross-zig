@@ -1,7 +1,6 @@
 // Third Parties
 const c = @import("../../c_global.zig").c_imp;
 const std = @import("std");
-const zigimg = import("zigimg");
 // dross-zig
 const InternalTexture = @import("../texture.zig").InternalTexture;
 const TextureErrors = @import("../texture.zig").TextureErrors;
@@ -31,7 +30,7 @@ pub const TextureGl = struct {
 
     /// Builds the TextureGl object and allocates any required memory
     /// Comments: The caller (Texture) will own the allocated memory.
-    pub fn new(allocator: *std.mem.Allocator, path: []const u8) !*Self {
+    pub fn new(allocator: std.mem.Allocator, path: []const u8) !*Self {
         var self = try allocator.create(TextureGl);
 
         const number_of_textures: c_int = 1;
@@ -97,7 +96,7 @@ pub const TextureGl = struct {
             border, // Boarde NOTE(devon): must be 0
             c.GL_RGBA, // Specifies the format of the pixel data
             c.GL_UNSIGNED_BYTE, // Specifies the data type of the pixel data
-            @ptrCast(*c_void, &data.ptr[0]), // void pointer to image data
+            @ptrCast(*anyopaque, &data.ptr[0]), // void pointer to image data
         );
 
         // Generate mipmap
@@ -110,7 +109,7 @@ pub const TextureGl = struct {
 
     /// Builds a dataless TextureGl object and allocates any required memory
     /// Comments: The caller (Texture) will own the allocated memory.
-    pub fn newDataless(allocator: *std.mem.Allocator, size: Vector2) !*Self {
+    pub fn newDataless(allocator: std.mem.Allocator, size: Vector2) !*Self {
         var self = try allocator.create(TextureGl);
 
         // Generate texture ID
@@ -144,7 +143,7 @@ pub const TextureGl = struct {
 
     /// Builds the TextureGl object for font rendering and allocates any required memory
     /// Comments: The caller (Texture) will own the allocated memory.
-    pub fn newFont(allocator: *std.mem.Allocator, data: [*c]u8, desired_width: u32, desired_rows: u32) !*Self {
+    pub fn newFont(allocator: std.mem.Allocator, data: [*c]u8, desired_width: u32, desired_rows: u32) !*Self {
         var self = try allocator.create(TextureGl);
 
         // Generate texture ID
@@ -172,14 +171,14 @@ pub const TextureGl = struct {
             0, // Boarde NOTE(devon): must be 0
             c.GL_RED, // Specifies the format of the pixel data
             c.GL_UNSIGNED_BYTE, // Specifies the data type of the pixel data
-            @ptrCast(?*const c_void, data), // void pointer to image data
+            @ptrCast(?*const anyopaque, data), // void pointer to image data
         );
 
         return self;
     }
 
-    /// Frees the allocated memory that OpenGlTexture required to function. 
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    /// Frees the allocated memory that OpenGlTexture required to function.
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         c.glDeleteTextures(1, @ptrCast(*c_uint, &self.internal_id));
 
         allocator.destroy(self);

@@ -76,7 +76,7 @@ pub const Input = struct {
 
     /// Allocates and builds the required components for the Input system.
     /// Comments: Any allocated memory will be owned by the Input System.
-    pub fn new(allocator: *std.mem.Allocator) !void {
+    pub fn new(allocator: std.mem.Allocator) !void {
         // Connect the callbacks
         _ = c.glfwSetKeyCallback(Application.window(), keyCallback);
         _ = c.glfwSetCursorPosCallback(Application.window(), mousePositionCallback);
@@ -226,7 +226,8 @@ pub const Input = struct {
     }
 
     /// Frees any allocated memory that was required for Input
-    pub fn free(allocator: *std.mem.Allocator) void {
+    pub fn free(allocator: std.mem.Allocator) void {
+        _ = allocator;
         mouse_button_map.deinit();
         mouse_button_released_set.deinit();
         key_map.deinit();
@@ -287,7 +288,7 @@ fn updateReleasedMouseButtons() void {
     // Cycle through the released map
     var iterator = mouse_button_released_set.iterator();
     while (iterator.next()) |entry| {
-        const key = entry.key;
+        const key = entry.key_ptr.*;
         // Check if the state of the mouse button has changed from released to pressed or down
         const current_state = mouse_button_map.get(key).?;
         // If it has not changed, then set it to neutral.
@@ -304,12 +305,15 @@ fn updateReleasedMouseButtons() void {
 /// The mouse position callback for GLFW.
 /// Comments: INTERNAL use only.
 pub fn mousePositionCallback(window: ?*c.GLFWwindow, x_pos: f64, y_pos: f64) callconv(.C) void {
+    _ = window;
     mouse_position = Vector2.new(@floatCast(f32, x_pos), @floatCast(f32, y_pos));
 }
 
 /// The mouse button callback for GLFW.
 /// Comments: INTERNAL use only.
 pub fn mouseButtonCallback(window: ?*c.GLFWwindow, button: c_int, action: c_int, mods: c_int) callconv(.C) void {
+    _ = window;
+    _ = mods;
     const button_convert = @intCast(u8, button);
     const button_enum = @intToEnum(DrossMouseButton, button_convert);
     if (mouse_button_map.contains(button_enum)) {
@@ -351,7 +355,7 @@ fn updateReleasedKeys() void {
     // Cycle through the released map
     var iterator = key_released_set.iterator();
     while (iterator.next()) |entry| {
-        const key = entry.key;
+        const key = entry.key_ptr.*;
         // Check if the state of the key has changed from released to pressed or down
         const current_state = key_map.get(key).?;
         // If it has not changed, then set it to neutral.
@@ -368,6 +372,9 @@ fn updateReleasedKeys() void {
 /// The key callback for GLFW so that we can more accurately keep track of key states.
 /// Comments: INTERNAL use only.
 pub fn keyCallback(window: ?*c.GLFWwindow, key: c_int, scancode: c_int, action: c_int, mods: c_int) callconv(.C) void {
+    _ = window;
+    _ = scancode;
+    _ = mods;
     const key_convert = @intCast(i16, key);
     const key_enum = @intToEnum(DrossKey, key_convert);
     if (key_map.contains(key_enum)) {

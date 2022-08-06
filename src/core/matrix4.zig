@@ -2,7 +2,7 @@
 const std = @import("std");
 const za = @import("zalgebra");
 const Vec4 = za.vec4;
-const Mat4 = za.mat4;
+const Mat4 = za.Mat4x4(f32);
 // dross-zig
 const Vector3 = @import("vector3.zig").Vector3;
 const Vector4 = @import("vector4.zig").Vector4;
@@ -38,7 +38,7 @@ pub const Matrix4 = struct {
 
     /// Construct a new 4x4 matrix from the given slice
     pub fn fromSlice(data: *const [16]f32) Self {
-        return = .{
+        return .{
             .data = Mat4.from_slice(data),
         };
     }
@@ -51,7 +51,7 @@ pub const Matrix4 = struct {
     /// Multiplies the matrix by a Vector4(f32) and returns the resulting Vector4(f32)
     pub fn multiplyVec4(self: Self, v: Vector4) Vector4 {
         return .{
-            .data = self.data.mult_by_vec4(v.data),
+            .data = self.data.mulByVec4(v.data),
         };
     }
 
@@ -59,7 +59,7 @@ pub const Matrix4 = struct {
     /// identity matrix and the given translation vector.
     pub fn fromTranslate(axis: Vector3) Self {
         return .{
-            .data = Mat4.from_translate(axis.data),
+            .data = Mat4.fromTranslate(axis.data),
         };
     }
 
@@ -79,7 +79,7 @@ pub const Matrix4 = struct {
 
     /// Builds a new 4x4 matrix from the given axis and angle (in degrees).
     pub fn fromRotation(angle_deg: f32, axis: Vector3) Self {
-        return = .{
+        return .{
             .data = Mat4.from_rotation(angle_deg, axis.data),
         };
     }
@@ -93,7 +93,7 @@ pub const Matrix4 = struct {
 
     /// Builds a rotation matrix from euler angles (X * Y * Z).
     pub fn fromEulerAngle(euler_angle: Vector3) Self {
-        return = .{
+        return .{
             .data = Mat4.from_euler_angle(euler_angle),
         };
     }

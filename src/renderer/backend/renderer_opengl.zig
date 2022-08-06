@@ -221,7 +221,7 @@ pub const RendererGl = struct {
 
     /// Builds the necessary components for the OpenGL renderer
     /// Comments: INTERNAL use only. The OpenGlBackend will be the owner of the allocated memory.
-    pub fn new(allocator: *std.mem.Allocator) !*Self {
+    pub fn new(allocator: std.mem.Allocator) !*Self {
         if (c.gladLoadGLLoader(@ptrCast(c.GLADloadproc, c.glfwGetProcAddress)) == 0) return OpenGlError.GladFailure;
 
         var self = try allocator.create(RendererGl);
@@ -489,7 +489,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT, // Type of data
             c.GL_FALSE, // Should the data be normalized?
             stride, // Stride
-            @intToPtr(?*c_void, offset_position), // Offset
+            @intToPtr(?*anyopaque, offset_position), // Offset
         );
 
         // Vertex Attributes are disabled by default, we need to enable them.
@@ -502,7 +502,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT, // Type of data
             c.GL_FALSE, // Should the data be normalized?
             stride, // Stride
-            @intToPtr(?*c_void, offset_color), // Offset
+            @intToPtr(?*anyopaque, offset_color), // Offset
         );
 
         // Enable Texture Coordinate Attribute
@@ -516,7 +516,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT, // Type of data
             c.GL_FALSE, // Should the data be normalized?
             stride, // Stride
-            @intToPtr(?*c_void, offset_tex), // Offset
+            @intToPtr(?*anyopaque, offset_tex), // Offset
         );
 
         // Enable Texture Coordinate Attribute
@@ -529,7 +529,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT, // Type of data
             c.GL_FALSE, // Should the data be normalized?
             stride, // Stride
-            @intToPtr(?*c_void, offset_index), // Offset
+            @intToPtr(?*anyopaque, offset_index), // Offset
         );
 
         // Enable Texture Coordinate Attribute
@@ -561,7 +561,7 @@ pub const RendererGl = struct {
         const screenbuffer_stride = @intCast(c_longlong, @sizeOf(Vertex));
         const screenbuffer_offset_color: u32 = 3 * size_f32;
         const screenbuffer_offset_tex: u32 =  7 * size_f32; // position offset(0)  + the length of the color bytes
-        const screenbuffer_offset_index: u32 = 9 * size_f32;
+        //const screenbuffer_offset_index: u32 = 9 * size_f32;
 
         c.glEnableVertexAttribArray(index_zero);
 
@@ -571,7 +571,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT,
             c.GL_FALSE,
             screenbuffer_stride,
-            @intToPtr(?*c_void, offset_position), // Offset
+            @intToPtr(?*anyopaque, offset_position), // Offset
         );
 
         c.glEnableVertexAttribArray(index_one);
@@ -582,7 +582,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT,
             c.GL_FALSE,
             screenbuffer_stride,
-            @intToPtr(?*c_void, screenbuffer_offset_color), // Offset
+            @intToPtr(?*anyopaque, screenbuffer_offset_color), // Offset
         );
 
         c.glEnableVertexAttribArray(index_two);
@@ -593,7 +593,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT,
             c.GL_FALSE,
             screenbuffer_stride,
-            @intToPtr(?*c_void, screenbuffer_offset_tex), // Offset
+            @intToPtr(?*anyopaque, screenbuffer_offset_tex), // Offset
         );
 
         //c.glEnableVertexAttribArray(index_three);
@@ -604,7 +604,7 @@ pub const RendererGl = struct {
         //    c.GL_FLOAT,
         //    c.GL_FALSE,
         //    screenbuffer_stride,
-        //    @intToPtr(?*c_void, screenbuffer_offset_index), // Offset
+        //    @intToPtr(?*anyopaque, screenbuffer_offset_index), // Offset
         //);
 
         // Setup framebuffers
@@ -643,7 +643,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT,
             c.GL_FALSE,
             font_stride,
-            @intToPtr(?*c_void, 0), // Offset
+            @intToPtr(?*anyopaque, 0), // Offset
         );
 
         c.glEnableVertexAttribArray(index_one);
@@ -655,7 +655,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT,
             c.GL_FALSE,
             font_stride,
-            @intToPtr(?*c_void, size_f32 * 3),
+            @intToPtr(?*anyopaque, size_f32 * 3),
         );
 
         c.glEnableVertexAttribArray(index_two);
@@ -667,7 +667,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT,
             c.GL_FALSE,
             font_stride,
-            @intToPtr(?*c_void, size_f32 * 7),
+            @intToPtr(?*anyopaque, size_f32 * 7),
         );
 
         c.glEnableVertexAttribArray(index_three);
@@ -679,7 +679,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT,
             c.GL_FALSE,
             font_stride,
-            @intToPtr(?*c_void, size_f32 * 9),
+            @intToPtr(?*anyopaque, size_f32 * 9),
         );
 
         // Unbind VBO
@@ -706,7 +706,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT, // Type of data
             c.GL_FALSE, // Should the data be normalized?
             gui_stride, // Stride
-            @intToPtr(?*c_void, offset_position), // Offset
+            @intToPtr(?*anyopaque, offset_position), // Offset
         );
         c.glEnableVertexAttribArray(index_zero);
 
@@ -717,7 +717,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT, // Type of data
             c.GL_FALSE, // Should the data be normalized?
             gui_stride, // Stride
-            @intToPtr(?*c_void, offset_color), // Offset
+            @intToPtr(?*anyopaque, offset_color), // Offset
         );
         c.glEnableVertexAttribArray(index_one);
 
@@ -729,7 +729,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT, // Type of data
             c.GL_FALSE, // Should the data be normalized?
             gui_stride, // Stride
-            @intToPtr(?*c_void, offset_tex), // Offset
+            @intToPtr(?*anyopaque, offset_tex), // Offset
         );
         c.glEnableVertexAttribArray(index_two);
             
@@ -740,7 +740,7 @@ pub const RendererGl = struct {
             c.GL_FLOAT, // Type of data
             c.GL_FALSE, // Should the data be normalized?
             gui_stride, // Stride
-            @intToPtr(?*c_void, offset_index), // Offset
+            @intToPtr(?*anyopaque, offset_index), // Offset
         );
         c.glEnableVertexAttribArray(index_three);
 
@@ -779,7 +779,7 @@ pub const RendererGl = struct {
     }
 
     /// Frees up any resources that was previously allocated
-    pub fn free(allocator: *std.mem.Allocator, self: *Self) void {
+    pub fn free(allocator: std.mem.Allocator, self: *Self) void {
         // Allow for OpenGL object to de-allocate any memory it needed
         // -- Default
         VertexArrayGl.free(allocator, self.vertex_array.?);
@@ -832,15 +832,15 @@ pub const RendererGl = struct {
         c.glCullFace(c.GL_BACK);
 
         const camera_pos = camera.position();
-        const camera_target = camera.targetPosition();
-        const camera_direction = camera_pos.subtract(camera_target).normalize();
-        const camera_right = Vector3.up().cross(camera_direction).normalize();
-        const camera_up = camera_direction.cross(camera_right);
+        // const camera_target = camera.targetPosition();
+        // const camera_direction = camera_pos.subtract(camera_target).normalize();
+        // const camera_right = Vector3.up().cross(camera_direction).normalize();
+        // const camera_up = camera_direction.cross(camera_right);
         const camera_zoom = camera.zoom();
 
         // Set up projection matrix
         const viewport_size = Application.viewportSize();
-        const window_size = Application.windowSize();
+        // const window_size = Application.windowSize();
 
         const projection = Matrix4.orthographic(
             0, // Left
@@ -869,7 +869,7 @@ pub const RendererGl = struct {
     /// Setups up the OpenGL specific components for rendering
     pub fn beginGui(self: *Self) void {
         // Set up projection matrix
-        const viewport_size = Application.viewportSize();
+        // const viewport_size = Application.viewportSize();
         const window_size = Application.windowSize();
         const gui_projection = Matrix4.orthographic(
             0, // Left
@@ -934,7 +934,7 @@ pub const RendererGl = struct {
 
     /// Draws geometry with a index buffer
     pub fn drawIndexed(index_count: u32) void {
-        const offset = @intToPtr(?*c_void, 0);
+        const offset = @intToPtr(?*anyopaque, 0);
         //const count: u32 = if (index_count == 0) v
         // Draw 
         c.glDrawElements(
@@ -1308,10 +1308,10 @@ pub const RendererGl = struct {
         //model = model.translate(origin_to_model);
 
         // Scaling
-        const size = sprite.size().?;
-        const sprite_scale = sprite.scale();
-        const w = size.x() * sprite_scale.x();
-        const h = size.y() * sprite_scale.y();
+        // const size = sprite.size().?;
+        // const sprite_scale = sprite.scale();
+        // const w = size.x() * sprite_scale.x();
+        // const h = size.y() * sprite_scale.y();
         //const scale = Vector3.new(w, h, 1.0);
         const scale = Vector3.fromVector2(sprite.scale(), 1.0);
         model = model.scale(scale);
@@ -1344,7 +1344,7 @@ pub const RendererGl = struct {
 
         const color = sprite.color();
         
-        const sprite_flip = sprite.flipH();
+        // const sprite_flip = sprite.flipH();
         //const d = size.z();
         const r = color.r;
         const g = color.g;
@@ -1395,7 +1395,7 @@ pub const RendererGl = struct {
         while(index < text_length) : (index += 1) {
             const character: u8 = text[index];
             const current_glyph = app.default_font.?.glyph(character) catch |err| {
-                std.debug.print("[Renderer]: Error occurred when retrieving glyph {}! {s}\n", .{character, err});
+                std.debug.print("[Renderer]: Error occurred when retrieving glyph {}! {}\n", .{character, err});
                 @panic("[Renderer]: Failed to find glyph!");
             };
 
@@ -1487,6 +1487,7 @@ pub const RendererGl = struct {
     
     /// Request to disable byte_alignment restriction
     pub fn setByteAlignment(self: *Self, packing_mode: PackingMode, byte_alignment: ByteAlignment) void {
+        _ = self;
         const pack_type = switch(packing_mode) {
             PackingMode.Pack => @enumToInt(GlPackingMode.Pack),
             PackingMode.Unpack => @enumToInt(GlPackingMode.Unpack),

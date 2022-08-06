@@ -77,7 +77,7 @@ pub const Renderer = struct {
 
     /// Allocates and builds a Renderer instance
     /// Comments: INTERNAL use only. The Renderer will be the owner of the allocated memory.
-    pub fn new(allocator: *std.mem.Allocator) anyerror!void {
+    pub fn new(allocator: std.mem.Allocator) anyerror!void {
         renderer = try allocator.create(Renderer);
 
         switch (api) {
@@ -91,7 +91,7 @@ pub const Renderer = struct {
 
     /// Frees any allocated memory that the Renderer owns
     /// Comments: INTERNAL use only.
-    pub fn free(allocator: *std.mem.Allocator) void {
+    pub fn free(allocator: std.mem.Allocator) void {
         if (renderer == undefined) return;
 
         switch (api) {
@@ -114,7 +114,7 @@ pub const Renderer = struct {
 
         // Call user-defined render
         _ = render_loop() catch |err| {
-            std.debug.print("[Renderer]: Render event encountered an error! {s}\n", .{err});
+            std.debug.print("[Renderer]: Render event encountered an error! {}\n", .{err});
             @panic("[Renderer]: Error occurred during the user-defined render event!\n");
         };
 
@@ -126,7 +126,7 @@ pub const Renderer = struct {
 
         // Call user-defined gui render
         _ = gui_render_loop() catch |err| {
-            std.debug.print("[Renderer]: Render event encountered an error! {s}\n", .{err});
+            std.debug.print("[Renderer]: Render event encountered an error! {}\n", .{err});
             @panic("[Renderer]: Error occurred during the user-defined render event!\n");
         };
 
